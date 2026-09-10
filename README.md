@@ -26,6 +26,8 @@ Copy `.env.example` to `.env` and fill in Bitrix24 and Ameriabank credentials.
 
 For production, set `NODE_ENV=production` and leave `AMERIA_PROXY_URL` empty. The server then connects to Ameriabank directly from its public IP. The SOCKS proxy is used only for local development.
 
+Production server setup details are in [`deploy/README.md`](deploy/README.md).
+
 Production server setup:
 
 ```bash

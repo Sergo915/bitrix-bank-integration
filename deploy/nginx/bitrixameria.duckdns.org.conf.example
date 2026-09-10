@@ -1,0 +1,24 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name bitrixameria.duckdns.org;
+
+    root /opt/milon-ameria/apps/client/dist;
+    index index.html;
+
+    # Bitrix loads the local app in an iframe.
+    add_header Content-Security-Policy "frame-ancestors 'self' https://milonmining24.bitrix24.ru;" always;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
