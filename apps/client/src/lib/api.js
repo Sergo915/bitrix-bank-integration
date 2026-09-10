@@ -1,3 +1,4 @@
+import { getSessionHeaders } from './auth.js';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000';
 
 export async function getHealth() {
@@ -11,7 +12,7 @@ export async function getHealth() {
 }
 
 export async function getReceipts() {
-  const response = await fetch(`${API_BASE_URL}/api/receipts`);
+  const response = await fetch(`${API_BASE_URL}/api/receipts`, { headers: getSessionHeaders() });
 
   if (!response.ok) {
     throw new Error('Receipts load failed');
@@ -25,6 +26,7 @@ export async function searchDeals(params, options = {}) {
     Object.entries(params).filter(([, value]) => String(value ?? '').trim())
   );
   const response = await fetch(`${API_BASE_URL}/api/receipts/deals/search?${search}`, {
+    headers: getSessionHeaders(),
     signal: options.signal
   });
 
@@ -38,9 +40,9 @@ export async function searchDeals(params, options = {}) {
 export async function confirmMatch(payload, options = {}) {
   const response = await fetch(`${API_BASE_URL}/api/receipts/match`, {
     method: 'POST',
-    headers: {
+    headers: getSessionHeaders({
       'Content-Type': 'application/json'
-    },
+    }),
     signal: options.signal,
     body: JSON.stringify(payload)
   });
@@ -56,9 +58,9 @@ export async function confirmMatch(payload, options = {}) {
 export async function undoMatch(payload, options = {}) {
   const response = await fetch(`${API_BASE_URL}/api/receipts/match/undo`, {
     method: 'POST',
-    headers: {
+    headers: getSessionHeaders({
       'Content-Type': 'application/json'
-    },
+    }),
     signal: options.signal,
     body: JSON.stringify(payload)
   });

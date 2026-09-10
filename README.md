@@ -38,6 +38,7 @@ Set the production values in `.env` before starting the server. The server needs
 
 ## Security and automatic sync
 
+- Set `BITRIX_AUTH_REQUIRED=true` in production. The client accepts Bitrix launch parameters, verifies the user with `user.current`, and stores each user/session in MySQL. Direct browser access without a Bitrix session is rejected.
 - Set `BITRIX_ALLOWED_DOMAINS` to the comma-separated Bitrix domains allowed to complete OAuth. The webhook domain is allowed automatically.
 - Set `AMERIA_AUTH_PATH`, `AMERIA_AUTH_MODE` and `AMERIA_TRANSACTIONS_PATH` from Ameriabank's final API specification.
 - Enable the scheduler with `AMERIA_SYNC_ENABLED=true`. Configure its interval with `AMERIA_SYNC_INTERVAL_MS` (minimum 60000 ms).

@@ -4,10 +4,12 @@ import helmet from 'helmet';
 import { env } from './config/env.js';
 import { ameriaRouter } from './routes/ameria.js';
 import { adminRouter } from './routes/admin.js';
+import { authRouter } from './routes/auth.js';
 import { bitrixRouter } from './routes/bitrix.js';
 import { healthRouter } from './routes/health.js';
 import { receiptsRouter } from './routes/receipts.js';
 import { startAmeriaScheduler } from './services/syncService.js';
+import { requireBitrixSession } from './services/authService.js';
 
 const app = express();
 
@@ -17,9 +19,10 @@ app.use(express.json({ limit: '1mb' }));
 
 app.use('/api/health', healthRouter);
 app.use('/api/bitrix', bitrixRouter);
-app.use('/api/ameria', ameriaRouter);
-app.use('/api/admin', adminRouter);
-app.use('/api/receipts', receiptsRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/ameria', requireBitrixSession, ameriaRouter);
+app.use('/api/admin', requireBitrixSession, adminRouter);
+app.use('/api/receipts', requireBitrixSession, receiptsRouter);
 
 app.use((error, _req, res, _next) => {
   const status = error.name === 'ZodError' ? 400 : error.status ?? error.response?.status ?? 500;

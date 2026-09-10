@@ -1686,3 +1686,31 @@ a.bitrix-link-button {
     grid-template-columns: 1fr;
   }
 }
+
+
+.app-auth-screen {
+  align-items: center;
+  background: #f5f7fb;
+  color: #334155;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100vh;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+}
+
+.app-auth-screen h1 {
+  color: #102a43;
+  margin: 0;
+}
+
+.app-auth-screen p {
+  margin: 0;
+  max-width: 560px;
+}
+
+.app-auth-error {
+  background: #fff7f7;
+}

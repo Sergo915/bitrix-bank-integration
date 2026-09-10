@@ -19,6 +19,8 @@ const envSchema = z.object({
   SERVER_PORT: z.coerce.number().int().positive().default(4000),
   CLIENT_ORIGIN: optionalUrl.default('http://localhost:5173'),
   BITRIX_ALLOWED_DOMAINS: optionalString,
+  BITRIX_AUTH_REQUIRED: optionalBoolean,
+  BITRIX_SESSION_TTL_SECONDS: z.coerce.number().int().min(300).default(28800),
   BITRIX_CLIENT_ID: optionalString,
   BITRIX_CLIENT_SECRET: optionalString,
   BITRIX_REDIRECT_URI: optionalUrl,
@@ -54,5 +56,10 @@ const envSchema = z.object({
   SMART_MATCH_V2: optionalBoolean.default(false)
 });
 
-export const env = envSchema.parse(process.env);
+const parsedEnv = envSchema.parse(process.env);
+
+export const env = {
+  ...parsedEnv,
+  BITRIX_AUTH_REQUIRED: parsedEnv.BITRIX_AUTH_REQUIRED ?? parsedEnv.NODE_ENV === 'production'
+};
 

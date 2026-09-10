@@ -1,8 +1,9 @@
+import { getSessionHeaders } from '../lib/auth.js';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000';
 
 async function request(path, token) {
   const response = await fetch(API_BASE_URL + path, {
-    headers: { 'x-admin-token': token }
+    headers: getSessionHeaders({ 'x-admin-token': token })
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -35,7 +36,7 @@ export function getAdminScheduler(token) {
 export async function startAdminScheduler(token, params = {}) {
   const response = await fetch(API_BASE_URL + '/api/admin/scheduler/start', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+    headers: getSessionHeaders({ 'Content-Type': 'application/json', 'x-admin-token': token }),
     body: JSON.stringify(params)
   });
   const payload = await response.json().catch(() => ({}));
@@ -46,7 +47,7 @@ export async function startAdminScheduler(token, params = {}) {
 export async function stopAdminScheduler(token) {
   const response = await fetch(API_BASE_URL + '/api/admin/scheduler/stop', {
     method: 'POST',
-    headers: { 'x-admin-token': token }
+    headers: getSessionHeaders({ 'x-admin-token': token })
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error ?? ('Scheduler stop failed (' + response.status + ')'));
@@ -56,10 +57,10 @@ export async function stopAdminScheduler(token) {
 export async function runAdminSync(token, params = {}) {
   const response = await fetch(API_BASE_URL + '/api/admin/sync', {
     method: 'POST',
-    headers: {
+    headers: getSessionHeaders({
       'Content-Type': 'application/json',
       'x-admin-token': token
-    },
+    }),
     body: JSON.stringify(params)
   });
   const payload = await response.json().catch(() => ({}));

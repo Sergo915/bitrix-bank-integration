@@ -16,9 +16,10 @@ Set these values in the root .env file:
     DB_PASSWORD=your-local-password
     DB_CONNECTION_LIMIT=10
     ADMIN_ACCESS_TOKEN=choose-a-local-admin-token
+    BITRIX_AUTH_REQUIRED=false  # local browser testing only; production must use true
 
 The regular dashboard remains at /. The separate admin page is available at:
 
     http://localhost:5173/#admin
 
-The admin API is protected by the x-admin-token header and reads from audit_events and user_sessions.
+The admin API requires both the x-admin-token header and a valid Bitrix app session. It reads user and session history from audit_events and user_sessions.
