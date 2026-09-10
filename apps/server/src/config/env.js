@@ -5,11 +5,11 @@ import { z } from 'zod';
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(currentDir, '../../../../');
-const externalEnvPath = process.env.MILON_ENV_FILE || resolve(projectRoot, '../.env');
+const externalEnvPath = process.env.MILON_ENV_FILE;
 
-// Production keeps secrets outside the repository (for example /var/www/.env).
-// The project-local .env remains a development fallback.
-config({ path: externalEnvPath });
+// Production sets MILON_ENV_FILE to a secret file outside the repository.
+// The project-local .env remains the development fallback.
+if (externalEnvPath) config({ path: externalEnvPath });
 config({ path: resolve(projectRoot, '.env') });
 config();
 

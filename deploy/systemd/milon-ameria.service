@@ -6,9 +6,10 @@ After=network.target mysql.service
 Type=simple
 User=www-data
 Group=www-data
-WorkingDirectory=/var/www/bitrix-connector
+WorkingDirectory=/var/www/milon-ameria
 Environment=NODE_ENV=production
-EnvironmentFile=/var/www/.env
+Environment=MILON_ENV_FILE=/var/www/milon-ameria.env
+EnvironmentFile=/var/www/milon-ameria.env
 ExecStart=/usr/bin/node apps/server/dist/index.js
 Restart=always
 RestartSec=5

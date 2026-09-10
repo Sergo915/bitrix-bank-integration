@@ -3,7 +3,7 @@ server {
     listen [::]:80;
     server_name bitrixameria.duckdns.org;
 
-    root /var/www/bitrix-connector/apps/client/dist;
+    root /var/www/milon-ameria/apps/client/dist;
     index index.html;
 
     # Bitrix loads the local app in an iframe.

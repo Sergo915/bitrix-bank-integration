@@ -20,10 +20,10 @@ sudo ufw --force enable
 ## 2. Application and database
 
 ```bash
-sudo mkdir -p /var/www/bitrix-connector
-sudo chown -R "$USER":"$USER" /var/www/bitrix-connector
-git clone https://github.com/TGG3Consulting/Milon_ameria.git /var/www/bitrix-connector
-cd /var/www/bitrix-connector
+sudo mkdir -p /var/www/milon-ameria
+sudo chown -R "$USER":"$USER" /var/www/milon-ameria
+git clone https://github.com/TGG3Consulting/Milon_ameria.git /var/www/milon-ameria
+cd /var/www/milon-ameria
 npm ci
 sudo mysql < database/schema.sql
 ```
@@ -38,11 +38,11 @@ FLUSH PRIVILEGES;
 EXIT;
 ```
 
-Create `/var/www/.env` from `.env.example`; keep it outside the project directory. At minimum set:
+Create `/var/www/milon-ameria.env` from `.env.example`; keep it outside the project directory. At minimum set:
 
 ```bash
-sudo cp /var/www/bitrix-connector/.env.example /var/www/.env
-sudo nano /var/www/.env
+sudo cp /var/www/milon-ameria/.env.example /var/www/milon-ameria.env
+sudo nano /var/www/milon-ameria.env
 ```
 
 
@@ -66,10 +66,10 @@ Build the server and client:
 
 ```bash
 npm run build
-sudo mkdir -p /var/www/bitrix-connector/data
-sudo chown -R www-data:www-data /var/www/bitrix-connector/data
-sudo chown www-data:www-data /var/www/.env
-sudo chmod 600 /var/www/.env
+sudo mkdir -p /var/www/milon-ameria/data
+sudo chown -R www-data:www-data /var/www/milon-ameria/data
+sudo chown www-data:www-data /var/www/milon-ameria.env
+sudo chmod 600 /var/www/milon-ameria.env
 ```
 
 ## 3. Start the API with systemd
@@ -107,7 +107,7 @@ Set the portal domain in `BITRIX_ALLOWED_DOMAINS`. Open the application from Bit
 For updates:
 
 ```bash
-cd /var/www/bitrix-connector
+cd /var/www/milon-ameria
 git pull origin main
 npm ci
 npm run build
