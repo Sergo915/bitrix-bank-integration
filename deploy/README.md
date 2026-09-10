@@ -24,7 +24,7 @@ sudo mkdir -p /var/www/milon-ameria
 sudo chown -R "$USER":"$USER" /var/www/milon-ameria
 git clone https://github.com/TGG3Consulting/Milon_ameria.git /var/www/milon-ameria
 cd /var/www/milon-ameria
-npm ci
+npm ci --include=dev
 sudo mysql < database/schema.sql
 ```
 
@@ -109,7 +109,7 @@ For updates:
 ```bash
 cd /var/www/milon-ameria
 git pull origin main
-npm ci
+npm ci --include=dev
 npm run build
 sudo systemctl restart milon-ameria
 ```
