@@ -4,7 +4,13 @@ import { config } from 'dotenv';
 import { z } from 'zod';
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
-config({ path: resolve(currentDir, '../../../../.env') });
+const projectRoot = resolve(currentDir, '../../../../');
+const externalEnvPath = process.env.MILON_ENV_FILE || resolve(projectRoot, '../.env');
+
+// Production keeps secrets outside the repository (for example /var/www/.env).
+// The project-local .env remains a development fallback.
+config({ path: externalEnvPath });
+config({ path: resolve(projectRoot, '.env') });
 config();
 
 const optionalUrl = z.preprocess((value) => (value === '' ? undefined : value), z.string().url().optional());

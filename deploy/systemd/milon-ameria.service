@@ -6,8 +6,9 @@ After=network.target mysql.service
 Type=simple
 User=www-data
 Group=www-data
-WorkingDirectory=/opt/milon-ameria
+WorkingDirectory=/var/www/bitrix-connector
 Environment=NODE_ENV=production
+EnvironmentFile=/var/www/.env
 ExecStart=/usr/bin/node apps/server/dist/index.js
 Restart=always
 RestartSec=5
