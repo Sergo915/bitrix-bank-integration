@@ -24,6 +24,18 @@ npm.cmd run dev
 
 Copy `.env.example` to `.env` and fill in Bitrix24 and Ameriabank credentials.
 
+For production, set `NODE_ENV=production` and leave `AMERIA_PROXY_URL` empty. The server then connects to Ameriabank directly from its public IP. The SOCKS proxy is used only for local development.
+
+Production server setup:
+
+```bash
+npm ci
+npm run build
+npm --workspace apps/server run start
+```
+
+Set the production values in `.env` before starting the server. The server needs the database variables (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`) and `ADMIN_ACCESS_TOKEN`; keep `.env` on the server only and never commit it.
+
 ## Security and automatic sync
 
 - Set `BITRIX_ALLOWED_DOMAINS` to the comma-separated Bitrix domains allowed to complete OAuth. The webhook domain is allowed automatically.

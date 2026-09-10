@@ -3,6 +3,7 @@ import test from 'node:test';
 import axios from 'axios';
 import { env } from '../src/config/env.js';
 import {
+  createAmeriaClient,
   fetchAmeriaAccounts,
   fetchAmeriaTransactions,
   normalizeAmeriaTransaction
@@ -31,6 +32,29 @@ test('maps Ameria credit transaction to the internal receipt shape', () => {
   assert.equal(result.payerName, 'Customer');
   assert.equal(result.purpose, 'Payment purpose');
   assert.equal(result.paymentDate, '2026-09-08T10:00:00Z');
+});
+
+test('uses a direct Ameria connection in production even when a local proxy is configured', (t) => {
+  const previousEnv = {
+    NODE_ENV: env.NODE_ENV,
+    AMERIA_BASE_URL: env.AMERIA_BASE_URL,
+    AMERIA_PROXY_URL: env.AMERIA_PROXY_URL
+  };
+  Object.assign(env, {
+    NODE_ENV: 'production',
+    AMERIA_BASE_URL: 'https://ameria.example',
+    AMERIA_PROXY_URL: 'socks5://127.0.0.1:1080'
+  });
+  let config;
+  t.mock.method(axios, 'create', (nextConfig) => {
+    config = nextConfig;
+    return {};
+  });
+  createAmeriaClient();
+  assert.equal(config.proxy, false);
+  assert.equal(config.httpAgent, undefined);
+  assert.equal(config.httpsAgent, undefined);
+  t.after(() => Object.assign(env, previousEnv));
 });
 
 test('maps Ameria debit transaction without losing its direction', () => {

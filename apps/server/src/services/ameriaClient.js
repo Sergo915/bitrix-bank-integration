@@ -13,6 +13,9 @@ let authenticationPromise = null;
 let refreshPromise = null;
 
 function getProxyUrl() {
+  // The local SOCKS proxy is only for development. Production connects directly
+  // from the server's public IP, which is the IP allowed by Ameriabank.
+  if (env.NODE_ENV === 'production') return null;
   return env.AMERIA_PROXY_URL || null;
 }
 
@@ -25,7 +28,7 @@ export function createAmeriaClient() {
     timeout: 30000,
     httpAgent: agent,
     httpsAgent: agent,
-    proxy: agent ? false : undefined,
+    proxy: false,
     headers: { 'Content-Type': 'application/json' }
   });
 }
