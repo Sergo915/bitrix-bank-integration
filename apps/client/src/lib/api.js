@@ -15,7 +15,7 @@ export async function getReceipts() {
   const response = await fetch(`${API_BASE_URL}/api/receipts`, { headers: getSessionHeaders() });
 
   if (!response.ok) {
-    throw new Error('Receipts load failed');
+    throw new Error(await getResponseError(response, 'Receipts load failed'));
   }
 
   return response.json();
@@ -31,7 +31,7 @@ export async function searchDeals(params, options = {}) {
   });
 
   if (!response.ok) {
-    throw new Error('Deal search failed');
+    throw new Error(await getResponseError(response, 'Deal search failed'));
   }
 
   return response.json();
@@ -48,8 +48,7 @@ export async function confirmMatch(payload, options = {}) {
   });
 
   if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.error ?? 'Match confirmation failed');
+    throw new Error(await getResponseError(response, 'Match confirmation failed'));
   }
 
   return response.json();
@@ -66,9 +65,13 @@ export async function undoMatch(payload, options = {}) {
   });
 
   if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.error ?? 'Match undo failed');
+    throw new Error(await getResponseError(response, 'Match undo failed'));
   }
 
   return response.json();
+}
+
+async function getResponseError(response, fallback) {
+  const data = await response.json().catch(() => ({}));
+  return data.error ?? `${fallback} (${response.status})`;
 }

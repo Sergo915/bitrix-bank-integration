@@ -31,6 +31,7 @@ const envSchema = z.object({
   BITRIX_CLIENT_SECRET: optionalString,
   BITRIX_REDIRECT_URI: optionalUrl,
   BITRIX_WEBHOOK_URL: optionalUrl,
+  BITRIX_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(10000).max(300000).default(90000),
   AMERIA_BASE_URL: optionalUrl,
   Ameria_access_Key: optionalString,
   AMERIA_APPLICATION_NAME: optionalString.default('MilonAmeriaIntegration'),

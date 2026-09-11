@@ -4,7 +4,7 @@ import { env } from '../config/env.js';
 export function createBitrixClient(domain, accessToken) {
   return axios.create({
     baseURL: `https://${domain}/rest`,
-    timeout: 30000,
+    timeout: env.BITRIX_REQUEST_TIMEOUT_MS,
     params: {
       auth: accessToken
     }
@@ -50,7 +50,7 @@ export function createBitrixWebhookClient() {
 
   return axios.create({
     baseURL: env.BITRIX_WEBHOOK_URL,
-    timeout: 30000
+    timeout: env.BITRIX_REQUEST_TIMEOUT_MS
   });
 }
 
@@ -67,7 +67,22 @@ export async function callBitrixMethodResponse(method, params = {}) {
     throw new Error('BITRIX_WEBHOOK_URL is not configured');
   }
 
-  const { data } = await client.post(`${method}.json`, params);
+  let data;
+
+  try {
+    ({ data } = await client.post(`${method}.json`, params));
+  } catch (error) {
+    if (error.code === 'ECONNABORTED' || /timeout/iu.test(error.message)) {
+      const timeoutError = new Error(
+        `Bitrix ${method} request timed out after ${env.BITRIX_REQUEST_TIMEOUT_MS}ms`
+      );
+      timeoutError.status = 504;
+      timeoutError.cause = error;
+      throw timeoutError;
+    }
+
+    throw error;
+  }
 
   if (data.error) {
     throw new Error(data.error_description ?? data.error);
