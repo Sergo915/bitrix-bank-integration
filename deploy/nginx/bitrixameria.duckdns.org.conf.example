@@ -12,6 +12,12 @@ server {
     location /api/ {
         proxy_pass http://127.0.0.1:4000;
         proxy_http_version 1.1;
+        # Bitrix Cloud can occasionally take longer than its usual response time while
+        # matching a receipt and recalculating several CRM entities. Keep this above the
+        # application's 90-second Bitrix request timeout so JSON errors reach the client.
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 120s;
+        proxy_read_timeout 120s;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
