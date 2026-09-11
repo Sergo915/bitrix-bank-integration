@@ -19,6 +19,8 @@ server {
     }
 
     location / {
+        # Bitrix may open the local-app handler with POST. Serve the SPA entry point.
+        error_page 405 =200 /index.html;
         try_files $uri $uri/ /index.html;
     }
 }
