@@ -90,7 +90,13 @@ export async function addActivity(entry) {
   entries.unshift(nextEntry);
   entries = entries.slice(0, 1000);
   writeQueue = writeQueue.then(persist, persist);
-  await writeQueue;
+  try {
+    await writeQueue;
+  } catch (error) {
+    // Activity history is auxiliary data. A filesystem permission or disk error must not
+    // roll back a successful Bitrix business operation that recorded this event.
+    console.error('Could not persist activity log:', error.message);
+  }
 
   try {
     await persistToDatabase(nextEntry);
