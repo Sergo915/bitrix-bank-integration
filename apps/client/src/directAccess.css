@@ -1,0 +1,78 @@
+.direct-access-page {
+  align-items: flex-start;
+  background: #202124;
+  box-sizing: border-box;
+  color: #9aa0a6;
+  display: flex;
+  font-family: Arial, sans-serif;
+  min-height: 100vh;
+  padding: clamp(120px, 17vh, 190px) 24px 80px;
+}
+
+.direct-access-error {
+  margin: 0 auto;
+  max-width: 750px;
+  width: 100%;
+}
+
+.direct-access-icon {
+  color: #9aa0a6;
+  height: 56px;
+  margin-bottom: 42px;
+  width: 56px;
+}
+
+.direct-access-error h1 {
+  color: #bdc1c6;
+  font-size: clamp(26px, 3vw, 36px);
+  font-weight: 500;
+  line-height: 1.25;
+  margin: 0 0 22px;
+}
+
+.direct-access-error p {
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0 0 18px;
+}
+
+.direct-access-error strong {
+  font-weight: 400;
+}
+
+.direct-access-error span {
+  color: #8ab4f8;
+}
+
+.direct-access-error code {
+  display: block;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  margin: 38px 0 74px;
+}
+
+.direct-access-error button {
+  background: #8ab4f8;
+  border: 0;
+  border-radius: 22px;
+  color: #202124;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  min-height: 44px;
+  padding: 0 24px;
+}
+
+.direct-access-error button:hover {
+  background: #aecbfa;
+}
+
+@media (max-width: 600px) {
+  .direct-access-page {
+    padding-top: 90px;
+  }
+
+  .direct-access-icon {
+    margin-bottom: 30px;
+  }
+}

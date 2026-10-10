@@ -1,0 +1,28 @@
+{
+  "name": "bitrix-ameriabank",
+  "type": "module",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Bitrix24 Cloud and Ameriabank Corporate API integration",
+  "workspaces": [
+    "apps/server",
+    "apps/client"
+  ],
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:server dev:client",
+    "dev:server": "npm --workspace apps/server run dev",
+    "dev:client": "npm --workspace apps/client run dev",
+    "build": "npm --workspaces run build",
+    "lint": "npm --workspaces run lint",
+    "test": "npm --workspace apps/server run test",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "eslint-plugin-react": "^7.37.5",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^3.3.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,2242 @@
+[
+  {
+    "input": "Payment for building 318, apartment 55",
+    "output": {
+      "normalized": "payment for building 318, apartment 55",
+      "building": "318",
+      "apartment": "55",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "շենք 12, բնակարան 45",
+    "output": {
+      "normalized": "շենք 12, բնակարան 45",
+      "building": "12",
+      "apartment": "45",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "дом 12, кв. 45",
+    "output": {
+      "normalized": "дом 12, кв. 45",
+      "building": "12",
+      "apartment": "45",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "корпус 3 квартира 101",
+    "output": {
+      "normalized": "корпус 3 квартира 101",
+      "building": "3",
+      "apartment": "101",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "Milon Tower շենք 5, բն 12, 55.7 sqm",
+    "output": {
+      "normalized": "milon tower շենք 5, բն 12, 55.7 sqm",
+      "building": "5",
+      "apartment": "12",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": "55.7",
+      "project": "Milon Tower"
+    }
+  },
+  {
+    "input": "apartment 55, building 318",
+    "output": {
+      "normalized": "apartment 55, building 318",
+      "building": "318",
+      "apartment": "55",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn55 shenk318",
+    "output": {
+      "normalized": "bn55 shenk318",
+      "building": "318",
+      "apartment": "55",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "բնակարան 55, շենք 318",
+    "output": {
+      "normalized": "բնակարան 55, շենք 318",
+      "building": "318",
+      "apartment": "55",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "",
+    "output": {
+      "normalized": "",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "   ",
+    "output": {
+      "normalized": "",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "\t\n\r ",
+    "output": {
+      "normalized": "",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "zzzz qqqq",
+    "output": {
+      "normalized": "zzzz qqqq",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "payment",
+    "output": {
+      "normalized": "payment",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn48",
+    "output": {
+      "normalized": "bn48",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn 48",
+    "output": {
+      "normalized": "bn 48",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn. #48",
+    "output": {
+      "normalized": "bn. #48",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn-48",
+    "output": {
+      "normalized": "bn-48",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "48bn",
+    "output": {
+      "normalized": "48bn",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "48 bn.",
+    "output": {
+      "normalized": "48 bn.",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "48-bn",
+    "output": {
+      "normalized": "48-bn",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "apt48",
+    "output": {
+      "normalized": "apt48",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "48apt",
+    "output": {
+      "normalized": "48apt",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "բն48",
+    "output": {
+      "normalized": "բն48",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "48բն",
+    "output": {
+      "normalized": "48բն",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn:48",
+    "output": {
+      "normalized": "bn:48",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn no.48",
+    "output": {
+      "normalized": "bn no.48",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn №48",
+    "output": {
+      "normalized": "bn no48",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn    48",
+    "output": {
+      "normalized": "bn 48",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn\t48",
+    "output": {
+      "normalized": "bn 48",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn=48",
+    "output": {
+      "normalized": "bn=48",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn/48",
+    "output": {
+      "normalized": "bn/48",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn,48",
+    "output": {
+      "normalized": "bn,48",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "building318",
+    "output": {
+      "normalized": "building318",
+      "building": "318",
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "318building",
+    "output": {
+      "normalized": "318building",
+      "building": "318",
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bldg. #318",
+    "output": {
+      "normalized": "bldg. #318",
+      "building": "318",
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "318 bldg.",
+    "output": {
+      "normalized": "318 bldg.",
+      "building": "318",
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "շենք318",
+    "output": {
+      "normalized": "շենք318",
+      "building": "318",
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "318շենք",
+    "output": {
+      "normalized": "318շենք",
+      "building": "318",
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn55/1",
+    "output": {
+      "normalized": "bn55/1",
+      "building": null,
+      "apartment": "55/1",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn55-1",
+    "output": {
+      "normalized": "bn55-1",
+      "building": null,
+      "apartment": "55-1",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn55a",
+    "output": {
+      "normalized": "bn55a",
+      "building": null,
+      "apartment": "55a",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn55ա",
+    "output": {
+      "normalized": "bn55ա",
+      "building": null,
+      "apartment": "55ա",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "55a apt",
+    "output": {
+      "normalized": "55a apt",
+      "building": null,
+      "apartment": "55a",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "kv 12/3",
+    "output": {
+      "normalized": "kv 12/3",
+      "building": null,
+      "apartment": null,
+      "addressNumber": "12/3",
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn№48",
+    "output": {
+      "normalized": "bnno48",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn 48",
+    "output": {
+      "normalized": "bn 48",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn​48",
+    "output": {
+      "normalized": "bn​48",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn﻿48",
+    "output": {
+      "normalized": "bn 48",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn–48",
+    "output": {
+      "normalized": "bn-48",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn—48",
+    "output": {
+      "normalized": "bn-48",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn‑48",
+    "output": {
+      "normalized": "bn-48",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "ｂｎ４８",
+    "output": {
+      "normalized": "bn48",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "ՇԵՆՔ 318",
+    "output": {
+      "normalized": "շենք 318",
+      "building": "318",
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "ДОМ 12",
+    "output": {
+      "normalized": "дом 12",
+      "building": "12",
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "BuIlDiNg 7",
+    "output": {
+      "normalized": "building 7",
+      "building": "7",
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "BN48",
+    "output": {
+      "normalized": "bn48",
+      "building": null,
+      "apartment": "48",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "մուտք 2",
+    "output": {
+      "normalized": "մուտք 2",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": "2",
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "подъезд 4",
+    "output": {
+      "normalized": "подъезд 4",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": "4",
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "entrance 2",
+    "output": {
+      "normalized": "entrance 2",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": "2",
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "2 մուտք",
+    "output": {
+      "normalized": "2 մուտք",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": "2",
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "floor 5",
+    "output": {
+      "normalized": "floor 5",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": "5",
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "этаж 9",
+    "output": {
+      "normalized": "этаж 9",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": "9",
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "հարկ 3",
+    "output": {
+      "normalized": "հարկ 3",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": "3",
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "հարկ -1",
+    "output": {
+      "normalized": "հարկ -1",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": "1",
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "floor -2",
+    "output": {
+      "normalized": "floor -2",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": "2",
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "-1 հարկ",
+    "output": {
+      "normalized": "-1 հարկ",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": "-1",
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "floor 100",
+    "output": {
+      "normalized": "floor 100",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "հարկ-3",
+    "output": {
+      "normalized": "հարկ-3",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": "3",
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "area 55.7",
+    "output": {
+      "normalized": "area 55.7",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": "55.7",
+      "project": null
+    }
+  },
+  {
+    "input": "area 55,7",
+    "output": {
+      "normalized": "area 55,7",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": "55.7",
+      "project": null
+    }
+  },
+  {
+    "input": "55.7 sqm",
+    "output": {
+      "normalized": "55.7 sqm",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": "55.7",
+      "project": null
+    }
+  },
+  {
+    "input": "55.7 sq m",
+    "output": {
+      "normalized": "55.7 sq m",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": "55.7",
+      "project": null
+    }
+  },
+  {
+    "input": "55.7 քմ",
+    "output": {
+      "normalized": "55.7 քմ",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": "55.7",
+      "project": null
+    }
+  },
+  {
+    "input": "55.7 մ²",
+    "output": {
+      "normalized": "55.7 մ2",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "55.7 m²",
+    "output": {
+      "normalized": "55.7 m2",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "55.7 մ2",
+    "output": {
+      "normalized": "55.7 մ2",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "55.7 m2",
+    "output": {
+      "normalized": "55.7 m2",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "մակերես 88",
+    "output": {
+      "normalized": "մակերես 88",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": "88",
+      "project": null
+    }
+  },
+  {
+    "input": "Contract dated 12/08/2026",
+    "output": {
+      "normalized": "contract dated 12/08/2026",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": "12/08/2026",
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "Contract 12.08.2026",
+    "output": {
+      "normalized": "contract 12.08.2026",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": "12.08.2026",
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "Contract 12-08-2026",
+    "output": {
+      "normalized": "contract 12-08-2026",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": "12-08-2026",
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "Contract 2026-08-12",
+    "output": {
+      "normalized": "contract 2026-08-12",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": "2026-08-12",
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "Contract 1/8/2026",
+    "output": {
+      "normalized": "contract 1/8/2026",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": "1/8/2026",
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "Contract 12/08/26",
+    "output": {
+      "normalized": "contract 12/08/26",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn 12.08.2026",
+    "output": {
+      "normalized": "bn 12.08.2026",
+      "building": null,
+      "apartment": "12",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": "12.08.2026",
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "շենք 2026 թ.",
+    "output": {
+      "normalized": "շենք 2026 թ.",
+      "building": "2026",
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "apartment 12/08/2026",
+    "output": {
+      "normalized": "apartment 12/08/2026",
+      "building": null,
+      "apartment": "12/08",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": "12/08/2026",
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "payment 01.02.2026 building 3",
+    "output": {
+      "normalized": "payment 01.02.2026 building 3",
+      "building": "3",
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": "01.02.2026",
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "contract 5/1 dated 12/08/2026 apt 55",
+    "output": {
+      "normalized": "contract 5/1 dated 12/08/2026 apt 55",
+      "building": null,
+      "apartment": "55",
+      "addressNumber": "5/1",
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": "12/08/2026",
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "dated 12/08/2026 and 13/09/2026 addr 8/2",
+    "output": {
+      "normalized": "dated 12/08/2026 and 13/09/2026 addr 8/2",
+      "building": null,
+      "apartment": null,
+      "addressNumber": "8/2",
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": "12/08/2026",
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "հասցե 5/1",
+    "output": {
+      "normalized": "հասցե 5/1",
+      "building": null,
+      "apartment": null,
+      "addressNumber": "5/1",
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "street 12/3",
+    "output": {
+      "normalized": "street 12/3",
+      "building": null,
+      "apartment": null,
+      "addressNumber": "12/3",
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "5/1",
+    "output": {
+      "normalized": "5/1",
+      "building": null,
+      "apartment": null,
+      "addressNumber": "5/1",
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "5/1/2026",
+    "output": {
+      "normalized": "5/1/2026",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": "5/1/2026",
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "apt 5/1",
+    "output": {
+      "normalized": "apt 5/1",
+      "building": null,
+      "apartment": "5/1",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bn5 and bn7/1",
+    "output": {
+      "normalized": "bn5 and bn7/1",
+      "building": null,
+      "apartment": "5",
+      "addressNumber": "7/1",
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "apt 5, apt 7/1",
+    "output": {
+      "normalized": "apt 5, apt 7/1",
+      "building": null,
+      "apartment": "5",
+      "addressNumber": "7/1",
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "նախնական համար 1234",
+    "output": {
+      "normalized": "նախնական համար 1234",
+      "building": null,
+      "apartment": "1234",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": "1234",
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "preliminary no. 998 for Milon Tower",
+    "output": {
+      "normalized": "preliminary no. 998 for milon tower",
+      "building": null,
+      "apartment": "998",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": "998",
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": "Milon Tower"
+    }
+  },
+  {
+    "input": "preliminary 77",
+    "output": {
+      "normalized": "preliminary 77",
+      "building": null,
+      "apartment": "77",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": "77",
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "գրանցման համար AB123",
+    "output": {
+      "normalized": "գրանցման համար ab123",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": "ab123",
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "reg. no. X-99",
+    "output": {
+      "normalized": "reg. no. x-99",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": "x-99",
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "Reg. 12",
+    "output": {
+      "normalized": "reg. 12",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": "12",
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "registration AB-12/3",
+    "output": {
+      "normalized": "registration ab-12/3",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": "ab-12/3",
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "regional office payment",
+    "output": {
+      "normalized": "regional office payment",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": "ional",
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "registry fee",
+    "output": {
+      "normalized": "registry fee",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": "istry",
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "regular payment for bn5",
+    "output": {
+      "normalized": "regular payment for bn5",
+      "building": null,
+      "apartment": "5",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": "ular",
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "REGRESS payment",
+    "output": {
+      "normalized": "regress payment",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": "ress",
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "գրանցում",
+    "output": {
+      "normalized": "գրանցում",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": "ում",
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "գրանց 5",
+    "output": {
+      "normalized": "գրանց 5",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": "5",
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "Milon Tower bn55",
+    "output": {
+      "normalized": "milon tower bn55",
+      "building": null,
+      "apartment": "55",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": "Milon Tower"
+    }
+  },
+  {
+    "input": "միլոն թաուեր բն55",
+    "output": {
+      "normalized": "միլոն թաուեր բն55",
+      "building": null,
+      "apartment": "55",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": "Milon Tower"
+    }
+  },
+  {
+    "input": "MILON PLAZA",
+    "output": {
+      "normalized": "milon plaza",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": "Milon Plaza"
+    }
+  },
+  {
+    "input": "MilonTower",
+    "output": {
+      "normalized": "milontower",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": "Milon Tower"
+    }
+  },
+  {
+    "input": "Milon  Tower",
+    "output": {
+      "normalized": "milon tower",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": "Milon Tower"
+    }
+  },
+  {
+    "input": "Milon Hills 3",
+    "output": {
+      "normalized": "milon hills 3",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": "Milon Hills"
+    }
+  },
+  {
+    "input": "2 Milon Tower, bn55",
+    "output": {
+      "normalized": "2 milon tower, bn55",
+      "building": "2",
+      "apartment": "55",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": "Milon Tower"
+    }
+  },
+  {
+    "input": "Milon Tower 2, 55bn",
+    "output": {
+      "normalized": "milon tower 2, 55bn",
+      "building": "2",
+      "apartment": "55",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": "Milon Tower"
+    }
+  },
+  {
+    "input": "shengavit district payment",
+    "output": {
+      "normalized": "shengavit district payment",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "abc318շենք",
+    "output": {
+      "normalized": "abc318շենք",
+      "building": "318",
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "x12 շենք",
+    "output": {
+      "normalized": "x12 շենք",
+      "building": "12",
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "ID318 building",
+    "output": {
+      "normalized": "id318 building",
+      "building": "318",
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "a5 bn",
+    "output": {
+      "normalized": "a5 bn",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "shenk 5",
+    "output": {
+      "normalized": "shenk 5",
+      "building": "5",
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "sh. 5",
+    "output": {
+      "normalized": "sh. 5",
+      "building": "5",
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "sh 5",
+    "output": {
+      "normalized": "sh 5",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "shen 5",
+    "output": {
+      "normalized": "shen 5",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "korpus 5",
+    "output": {
+      "normalized": "korpus 5",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "k. 5",
+    "output": {
+      "normalized": "k. 5",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "kv 5",
+    "output": {
+      "normalized": "kv 5",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "kv.5",
+    "output": {
+      "normalized": "kv.5",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bnak 5",
+    "output": {
+      "normalized": "bnak 5",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "bnakaran 5",
+    "output": {
+      "normalized": "bnakaran 5",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "flat 5",
+    "output": {
+      "normalized": "flat 5",
+      "building": null,
+      "apartment": "5",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "кв 5",
+    "output": {
+      "normalized": "кв 5",
+      "building": null,
+      "apartment": "5",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "կվ 5",
+    "output": {
+      "normalized": "կվ 5",
+      "building": null,
+      "apartment": "5",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "շենք 4 բն 4",
+    "output": {
+      "normalized": "շենք 4 բն 4",
+      "building": "4",
+      "apartment": "4",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "entrance2, 5floor, 55,7 sqm",
+    "output": {
+      "normalized": "entrance2, 5floor, 55,7 sqm",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": "2",
+      "floor": "5",
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": "55.7",
+      "project": null
+    }
+  },
+  {
+    "input": "payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment ",
+    "output": {
+      "normalized": "payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment payment",
+      "building": null,
+      "apartment": null,
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": null,
+      "area": null,
+      "project": null
+    }
+  },
+  {
+    "input": "Оплата за квартиру 55 в доме 12, Milon Tower, площадь 55,7 кв.м, договор от 12/08/2026",
+    "output": {
+      "normalized": "оплата за квартиру 55 в доме 12, milon tower, площадь 55,7 кв.м, договор от 12/08/2026",
+      "building": null,
+      "apartment": "7",
+      "addressNumber": null,
+      "entrance": null,
+      "floor": null,
+      "preliminaryNumber": null,
+      "registrationNumber": null,
+      "contractDate": "12/08/2026",
+      "area": null,
+      "project": "Milon Tower"
+    }
+  }
+]

@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+*.log
+data/
+.DS_Store
+.claude/
+.vscode/
+.server-backups/
+.deploy-backups/
+coverage/
+*.pem
+*.key
+*.p12
+*.pfx
