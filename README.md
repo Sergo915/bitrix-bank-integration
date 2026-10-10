@@ -37,8 +37,8 @@ Copy `.env.example` to `.env` and fill in Bitrix24 and Ameriabank credentials.
 
 For the server-side Local Application, configure these Bitrix24 URLs after deploying the client build:
 
-- Initial installation path: `https://bitrixameria.duckdns.org/api/bitrix/install`
-- Handler path: `https://bitrixameria.duckdns.org/api/bitrix/app`
+- Initial installation path: `https://your-domain.example/api/bitrix/install`
+- Handler path: `https://your-domain.example/api/bitrix/app`
 - Enable `Application completes installation itself` when no installation wizard is needed.
 
 The application accepts Bitrix24 authorization only through the signed installation/session flow. Direct browser access to the handler is rejected, API routes require the Bitrix session, and Bitrix deal navigation uses the in-portal `BX24.openPath` method.
@@ -50,10 +50,10 @@ Set `BITRIX_SESSION_SECRET` to a long random value in the production `.env`. Do 
 The production service starts the compiled server from `apps/server/dist`, so rebuild after pulling source changes before restarting systemd:
 
 ```bash
-cd /var/www/milon-ameria
+cd /path/to/your/project
 git pull --ff-only origin main
 npm ci
 npm run build
-sudo systemctl restart milon-ameria
-sudo systemctl status milon-ameria --no-pager
+sudo systemctl restart your-service-name
+sudo systemctl status your-service-name --no-pager
 ```

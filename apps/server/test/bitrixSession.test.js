@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { basename } from 'node:path';
 import test from 'node:test';
 
-process.env.BITRIX_ALLOWED_DOMAINS = 'milonmining24.bitrix24.ru';
+process.env.BITRIX_ALLOWED_DOMAINS = 'example.bitrix24.com';
 
 const { getClientIndexPath, normalizeBitrixAuth } = await import('../src/services/bitrixSession.js');
 
@@ -20,12 +20,12 @@ test('normalizes a Bitrix UI launch when DOMAIN is supplied in the query string'
       member_id: 'member-id'
     },
     {
-      DOMAIN: 'milonmining24.bitrix24.ru',
+      DOMAIN: 'example.bitrix24.com',
       APP_SID: 'application-session-id'
     }
   );
 
-  assert.equal(auth.domain, 'milonmining24.bitrix24.ru');
+  assert.equal(auth.domain, 'example.bitrix24.com');
   assert.equal(auth.accessToken, 'access-token');
   assert.equal(auth.refreshToken, 'refresh-token');
   assert.equal(auth.applicationToken, 'application-token');
@@ -35,7 +35,7 @@ test('normalizes a Bitrix UI launch when DOMAIN is supplied in the query string'
 test('continues to normalize nested installation authorization', () => {
   const auth = normalizeBitrixAuth({
     auth: {
-      domain: 'milonmining24.bitrix24.ru',
+      domain: 'example.bitrix24.com',
       access_token: 'access-token',
       refresh_token: 'refresh-token',
       application_token: 'application-token',
@@ -43,6 +43,6 @@ test('continues to normalize nested installation authorization', () => {
     }
   });
 
-  assert.equal(auth.domain, 'milonmining24.bitrix24.ru');
+  assert.equal(auth.domain, 'example.bitrix24.com');
   assert.equal(auth.accessToken, 'access-token');
 });
