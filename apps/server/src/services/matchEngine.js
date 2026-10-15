@@ -1,3 +1,5 @@
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 import { addActivity, getActivityLog } from './activityStore.js';
 import { callBitrixMethod, listBitrixMethod, listBitrixDealsById } from './bitrixClient.js';
 import { env } from '../config/env.js';
@@ -108,6 +110,9 @@ const matchLocks = new Map();
 const dealLocks = new Map();
 let stagesPromise = null;
 let receiptBoardLoadPromise = null;
+let receiptBoardCacheLoaded = false;
+let receiptBoardCache = null;
+let receiptBoardCacheWriteQueue = Promise.resolve();
 let recentDealsPromise = null;
 let recentDealsCache = null;
 let recentDealsGeneration = 0;
@@ -230,12 +235,60 @@ export function parsePurpose(purpose = '') {
 }
 
 export function listReceipts() {
+  return refreshReceiptBoardCache();
+}
+
+export async function listCachedReceipts() {
+  await ensureReceiptBoardCacheLoaded();
+  if (receiptBoardCache?.board) {
+    if (Date.now() - receiptBoardCache.updatedAt >= env.RECEIPT_BOARD_CACHE_TTL_MS) {
+      refreshReceiptBoardCache().catch((error) => {
+        console.error('Could not refresh receipt board cache:', error.message);
+      });
+    }
+    return receiptBoardCache.board;
+  }
+  return refreshReceiptBoardCache();
+}
+
+export function refreshReceiptBoardCache() {
   if (receiptBoardLoadPromise) return receiptBoardLoadPromise;
 
-  receiptBoardLoadPromise = loadReceipts().finally(() => {
-    receiptBoardLoadPromise = null;
-  });
+  receiptBoardLoadPromise = loadReceipts()
+    .then(async (board) => {
+      receiptBoardCache = { updatedAt: Date.now(), board };
+      await persistReceiptBoardCache();
+      return board;
+    })
+    .finally(() => {
+      receiptBoardLoadPromise = null;
+    });
   return receiptBoardLoadPromise;
+}
+
+async function ensureReceiptBoardCacheLoaded() {
+  if (receiptBoardCacheLoaded) return;
+  receiptBoardCacheLoaded = true;
+  const cachePath = resolve(env.RECEIPT_BOARD_CACHE_PATH);
+  try {
+    const parsed = JSON.parse(await readFile(cachePath, 'utf8'));
+    if (parsed?.board && Number.isFinite(parsed.updatedAt)) receiptBoardCache = parsed;
+  } catch (error) {
+    if (error.code !== 'ENOENT' && !(error instanceof SyntaxError)) throw error;
+    if (error instanceof SyntaxError) console.error(`Ignoring invalid receipt board cache at ${cachePath}:`, error.message);
+  }
+}
+
+function persistReceiptBoardCache() {
+  const cachePath = resolve(env.RECEIPT_BOARD_CACHE_PATH);
+  const snapshot = JSON.stringify(receiptBoardCache);
+  receiptBoardCacheWriteQueue = receiptBoardCacheWriteQueue.then(async () => {
+    await mkdir(dirname(cachePath), { recursive: true });
+    const temporaryPath = `${cachePath}.${process.pid}.tmp`;
+    await writeFile(temporaryPath, snapshot, 'utf8');
+    await rename(temporaryPath, cachePath);
+  });
+  return receiptBoardCacheWriteQueue;
 }
 
 async function loadReceipts() {

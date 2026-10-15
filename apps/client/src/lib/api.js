@@ -10,8 +10,9 @@ export async function getHealth() {
   return response.json();
 }
 
-export async function getReceipts() {
-  const response = await fetch(`${API_BASE_URL}/api/receipts`, { credentials: 'include' });
+export async function getReceipts(options = {}) {
+  const refreshQuery = options.forceRefresh ? '?refresh=1' : '';
+  const response = await fetch(`${API_BASE_URL}/api/receipts${refreshQuery}`, { credentials: 'include' });
 
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));

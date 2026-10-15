@@ -49,6 +49,8 @@ const envSchema = z.object({
   AMERIA_SYNC_FROM_DATE: optionalString.default('2026-01-01'),
   AMERIA_SCHEDULER_STATE_PATH: optionalString.default('data/ameria-scheduler-state.json'),
   ACTIVITY_LOG_PATH: optionalString,
+  RECEIPT_BOARD_CACHE_PATH: optionalString.default('data/receipt-board-cache.json'),
+  RECEIPT_BOARD_CACHE_TTL_MS: z.coerce.number().int().min(5000).default(60000),
   DB_HOST: optionalString,
   DB_PORT: z.coerce.number().int().positive().default(3306),
   DB_NAME: optionalString.default('milon_ameria'),

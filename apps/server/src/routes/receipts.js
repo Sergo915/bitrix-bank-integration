@@ -4,6 +4,7 @@ import {
   confirmMatch,
   importBankTransaction,
   listBuildingOptions,
+  listCachedReceipts,
   listReceipts,
   normalizeApartmentSearchInput,
   searchDeals,
@@ -16,9 +17,10 @@ export const receiptsRouter = Router();
 
 receiptsRouter.use(requireBitrixSession);
 
-receiptsRouter.get('/', async (_req, res, next) => {
+receiptsRouter.get('/', async (req, res, next) => {
   try {
-    res.json(await listReceipts());
+    const forceRefresh = req.query.refresh === '1';
+    res.json(await (forceRefresh ? listReceipts() : listCachedReceipts()));
   } catch (error) {
     next(error);
   }

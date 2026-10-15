@@ -86,12 +86,12 @@ export default function App() {
     );
   }
 
-  async function refreshData() {
+  async function refreshData(forceRefresh = false) {
     setLoading(true);
     setError('');
 
     try {
-      const receiptData = await getReceipts();
+      const receiptData = await getReceipts({ forceRefresh });
       setBoard(receiptData);
       setSelectedReceiptId((current) => current || receiptData.unmatched[0]?.id || '');
       setReceiptQueueIndex(0);
@@ -128,7 +128,7 @@ export default function App() {
       });
       setSelectedDeal(null);
       setManualDeals([]);
-      await refreshData();
+      await refreshData(true);
       return true;
     } catch (err) {
       if (err.name !== 'AbortError') {
@@ -226,7 +226,7 @@ export default function App() {
 
     try {
       await undoMatch({ receiptId: nextReceiptId, dealId });
-      await refreshData();
+      await refreshData(true);
       return true;
     } catch (err) {
       setError(err.message);
@@ -339,7 +339,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    refreshData();
+    refreshData(false);
   }, []);
 
   useEffect(() => {
