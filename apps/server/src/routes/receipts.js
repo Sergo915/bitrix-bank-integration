@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   confirmMatch,
   importBankTransaction,
+  invalidateReceiptBoard,
   listBuildingOptions,
   listCachedReceipts,
   listReceipts,
@@ -30,6 +31,7 @@ receiptsRouter.post('/trash', async (req, res, next) => {
   try {
     const { receiptId } = z.object({ receiptId: z.string().regex(/^\d+$/) }).parse(req.body);
     await trashReceipt(receiptId);
+    invalidateReceiptBoard();
     res.json({ ok: true, receiptId });
   } catch (error) {
     next(error);
@@ -40,6 +42,7 @@ receiptsRouter.post('/trash/restore', async (req, res, next) => {
   try {
     const { receiptId } = z.object({ receiptId: z.string().regex(/^\d+$/) }).parse(req.body);
     await restoreReceipt(receiptId);
+    invalidateReceiptBoard();
     res.json({ ok: true, receiptId });
   } catch (error) {
     next(error);

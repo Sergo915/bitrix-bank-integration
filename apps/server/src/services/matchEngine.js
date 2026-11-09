@@ -110,6 +110,8 @@ const matchLocks = new Map();
 const dealLocks = new Map();
 let stagesPromise = null;
 let receiptBoardLoadPromise = null;
+let receiptBoardLoadGeneration = -1;
+let receiptBoardGeneration = 0;
 let receiptBoardCacheLoaded = false;
 let receiptBoardCache = null;
 let receiptBoardCacheWriteQueue = Promise.resolve();
@@ -252,18 +254,36 @@ export async function listCachedReceipts() {
 }
 
 export function refreshReceiptBoardCache() {
-  if (receiptBoardLoadPromise) return receiptBoardLoadPromise;
+  // Only an in-flight load started after the last board mutation can be shared. Reusing an older
+  // one would answer a post-match request with a pre-match snapshot and then cache it as fresh.
+  if (receiptBoardLoadPromise && receiptBoardLoadGeneration === receiptBoardGeneration) {
+    return receiptBoardLoadPromise;
+  }
 
-  receiptBoardLoadPromise = loadReceipts()
+  const generation = receiptBoardGeneration;
+  const supersededLoad = receiptBoardLoadPromise;
+  const currentPromise = Promise.resolve(supersededLoad)
+    .catch(() => undefined)
+    .then(() => loadReceipts())
     .then(async (board) => {
-      receiptBoardCache = { updatedAt: Date.now(), board };
-      await persistReceiptBoardCache();
+      if (generation === receiptBoardGeneration) {
+        receiptBoardCache = { updatedAt: Date.now(), board };
+        await persistReceiptBoardCache();
+      }
       return board;
     })
     .finally(() => {
-      receiptBoardLoadPromise = null;
+      if (receiptBoardLoadPromise === currentPromise) receiptBoardLoadPromise = null;
     });
-  return receiptBoardLoadPromise;
+
+  receiptBoardLoadPromise = currentPromise;
+  receiptBoardLoadGeneration = generation;
+  return currentPromise;
+}
+
+export function invalidateReceiptBoard() {
+  receiptBoardGeneration += 1;
+  receiptBoardCache = null;
 }
 
 async function ensureReceiptBoardCacheLoaded() {
@@ -337,6 +357,7 @@ export async function importBankTransaction(input) {
 
   const importPromise = createBankReceiptOnce(transaction).finally(() => {
     receiptImportLocks.delete(transactionId);
+    invalidateReceiptBoard();
   });
   receiptImportLocks.set(transactionId, importPromise);
   return importPromise;
@@ -405,16 +426,24 @@ export async function confirmMatch(payload) {
   const receiptId = String(payload.receiptId);
   const dealId = String(payload.dealId);
   const alreadyProcessing = matchLocks.has(receiptId);
-  const result = await runWithKeyedLock(matchLocks, receiptId, () =>
-    runWithKeyedLock(dealLocks, dealId, () => confirmMatchOnce(payload))
-  );
+  try {
+    const result = await runWithKeyedLock(matchLocks, receiptId, () =>
+      runWithKeyedLock(dealLocks, dealId, () => confirmMatchOnce(payload))
+    );
 
-  return alreadyProcessing ? { ...result, alreadyProcessing: true } : result;
+    return alreadyProcessing ? { ...result, alreadyProcessing: true } : result;
+  } finally {
+    invalidateReceiptBoard();
+  }
 }
 
 export async function undoMatch(payload) {
   const receiptId = String(payload.receiptId);
-  return runWithKeyedLock(matchLocks, receiptId, () => undoMatchOnce(payload));
+  try {
+    return await runWithKeyedLock(matchLocks, receiptId, () => undoMatchOnce(payload));
+  } finally {
+    invalidateReceiptBoard();
+  }
 }
 
 async function confirmMatchOnce({ receiptId, dealId, scheduleIds = [] }) {
