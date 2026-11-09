@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Banknote,
   Check,
@@ -54,6 +54,7 @@ export default function App() {
   const [pendingMatches, setPendingMatches] = useState([]);
   const [processingMatches, setProcessingMatches] = useState([]);
   const [openFilterKey, setOpenFilterKey] = useState('');
+  const revalidatingRef = useRef(false);
   const [columnFilters, setColumnFilters] = useState({
     unmatched: createEmptyColumnFilter(),
     matched: createEmptyColumnFilter()
@@ -86,6 +87,22 @@ export default function App() {
     );
   }
 
+  // A stale cached board is rendered right away so the page opens instantly, then replaced
+  // in place once the fresh one arrives. No loading screen and no reset of what the manager
+  // has selected, so the swap is invisible unless the data actually changed.
+  async function revalidateBoard() {
+    if (revalidatingRef.current) return;
+    revalidatingRef.current = true;
+
+    try {
+      setBoard(await getReceipts({ forceRefresh: true }));
+    } catch {
+      // The cached board stays on screen; the next action or reload retries.
+    } finally {
+      revalidatingRef.current = false;
+    }
+  }
+
   async function refreshData(forceRefresh = false) {
     setLoading(true);
     setError('');
@@ -97,6 +114,8 @@ export default function App() {
       setReceiptQueueIndex(0);
       setSelectedSuggestionId('');
       setInitialLoaded(true);
+
+      if (receiptData.boardSource === 'stale-cache') revalidateBoard();
     } catch (err) {
       setError(err.message);
     } finally {

@@ -1,12 +1,17 @@
 import assert from 'node:assert/strict';
-import { rm } from 'node:fs/promises';
+import { rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
 import axios from 'axios';
 import { env } from '../src/config/env.js';
-import { invalidateReceiptBoard, listReceipts, resetStageCache } from '../src/services/matchEngine.js';
+import {
+  invalidateReceiptBoard,
+  listCachedReceipts,
+  listReceipts,
+  resetStageCache
+} from '../src/services/matchEngine.js';
 
 function createDeferred() {
   let resolve;
@@ -85,6 +90,21 @@ test('a forced refresh after a match does not reuse the pre-match load already i
   );
 });
 
+test('an empty board is never cached, so a broken Bitrix cannot pin the page to zero receipts', async (t) => {
+  const { gates, state } = setupBoardLoadHarness(t, 2);
+  gates[0].resolve();
+  gates[1].resolve();
+
+  const first = await listCachedReceipts();
+  const second = await listCachedReceipts();
+
+  assert.equal(first.unmatched.length, 0);
+  assert.equal(first.boardSource, 'fresh', 'an empty board must never be served from the cache');
+  assert.equal(second.boardSource, 'fresh');
+  assert.equal(state.voucherListCalls, 2, 'each read must reload instead of trusting an empty cache');
+  await assert.rejects(() => stat(join(tmpdir(), `receipt-board-cache-${process.pid}-2.json`)));
+});
+
 test('concurrent reads with no mutation in between still share a single load', async (t) => {
   const { gates, state } = setupBoardLoadHarness(t, 1);
 
@@ -96,5 +116,5 @@ test('concurrent reads with no mutation in between still share a single load', a
   const [firstBoard, secondBoard] = await Promise.all([first, second]);
 
   assert.equal(state.voucherListCalls, 1, 'reads without a mutation must be deduplicated');
-  assert.equal(firstBoard, secondBoard);
+  assert.deepEqual(firstBoard, secondBoard, 'both callers must see the same shared load');
 });

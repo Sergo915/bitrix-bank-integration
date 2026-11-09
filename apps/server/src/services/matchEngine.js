@@ -236,21 +236,34 @@ export function parsePurpose(purpose = '') {
   };
 }
 
-export function listReceipts() {
-  return refreshReceiptBoardCache();
+export async function listReceipts() {
+  return withBoardSource(await refreshReceiptBoardCache(), 'fresh', Date.now());
+}
+
+// An empty board is what a failing or throttled Bitrix looks like, and it is also cheap to
+// rebuild because loadReceipts() short-circuits before deals and schedules. So it is never
+// worth caching: serving one instantly would only hide real receipts behind an empty page.
+function hasCacheableReceipts(board) {
+  return Boolean(board?.unmatched?.length || board?.matched?.length || board?.trashed?.length);
+}
+
+function withBoardSource(board, source, updatedAt = null) {
+  return { ...board, boardSource: source, boardUpdatedAt: updatedAt };
 }
 
 export async function listCachedReceipts() {
   await ensureReceiptBoardCacheLoaded();
-  if (receiptBoardCache?.board) {
-    if (Date.now() - receiptBoardCache.updatedAt >= env.RECEIPT_BOARD_CACHE_TTL_MS) {
+  if (hasCacheableReceipts(receiptBoardCache?.board)) {
+    const stale = Date.now() - receiptBoardCache.updatedAt >= env.RECEIPT_BOARD_CACHE_TTL_MS;
+    if (stale) {
       refreshReceiptBoardCache().catch((error) => {
         console.error('Could not refresh receipt board cache:', error.message);
       });
     }
-    return receiptBoardCache.board;
+    // The client renders this immediately and revalidates in the background when it is stale.
+    return withBoardSource(receiptBoardCache.board, stale ? 'stale-cache' : 'cache', receiptBoardCache.updatedAt);
   }
-  return refreshReceiptBoardCache();
+  return withBoardSource(await refreshReceiptBoardCache(), 'fresh', Date.now());
 }
 
 export function refreshReceiptBoardCache() {
@@ -266,7 +279,9 @@ export function refreshReceiptBoardCache() {
     .catch(() => undefined)
     .then(() => loadReceipts())
     .then(async (board) => {
-      if (generation === receiptBoardGeneration) {
+      // A superseded load must not overwrite the cache, and an empty board must never become
+      // one: it would be served instantly to every reader until the TTL expired.
+      if (generation === receiptBoardGeneration && hasCacheableReceipts(board)) {
         receiptBoardCache = { updatedAt: Date.now(), board };
         await persistReceiptBoardCache();
       }
@@ -318,6 +333,7 @@ async function loadReceipts() {
     return {
       unmatched: [],
       matched: [],
+      trashed: [],
       log: await getActivityLog()
     };
   }
