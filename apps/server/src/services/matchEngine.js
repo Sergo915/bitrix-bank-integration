@@ -742,11 +742,29 @@ export async function importBankTransaction(input) {
     return receiptImportLocks.get(transactionId).then((result) => ({ ...result, created: false }));
   }
 
-  const importPromise = createBankReceiptOnce(transaction).finally(() => {
-    receiptImportLocks.delete(transactionId);
-    // A brand new receipt cannot be synthesised into the cached board, so it is refreshed.
-    invalidateReceiptBoard();
-  });
+  // The bank sync walks every transaction it has ever seen, so this runs hundreds of times an
+  // hour and almost always finds the receipt already there. It used to invalidate the whole
+  // board each time regardless, which is what kept a two-minute rebuild running every few
+  // minutes around the clock. Now only a receipt that was really created causes any work, and
+  // that work is a single read of the new receipt by id.
+  const importPromise = createBankReceiptOnce(transaction)
+    .then((result) => {
+      const receiptId = String(result?.receipt?.id ?? result?.receipt?.ID ?? '');
+
+      if (result?.created && receiptId) {
+        syncReceiptBoard({ receiptIds: [receiptId], reason: 'bank import' }).catch((error) => {
+          console.error('Could not place the imported receipt on the board:', error.message);
+        });
+      } else if (result?.created) {
+        // Created but Bitrix did not say which id: only a rebuild can find it.
+        invalidateReceiptBoard();
+      }
+
+      return result;
+    })
+    .finally(() => {
+      receiptImportLocks.delete(transactionId);
+    });
   receiptImportLocks.set(transactionId, importPromise);
   return importPromise;
 }

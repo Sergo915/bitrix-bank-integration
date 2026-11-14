@@ -136,3 +136,37 @@ test('a receipt moved out of the bank-receipt category leaves the board', async 
 
   assert.deepEqual(result.removedIds, ['901']);
 });
+
+// The bank sync re-offers every transaction it has ever seen -- hundreds every few minutes --
+// and nearly all of them already exist. Invalidating the board for each one, as this used to,
+// kept a two-minute rebuild running around the clock and starved everything else.
+test('re-importing a transaction that already exists does not rebuild the board', async (t) => {
+  const { calls } = await setupSync(t, {
+    seedBoard: cloneSeed(),
+    handlers: (method, params) => {
+      if (method !== 'crm.item.list.json') return null;
+      // The lookup by xmlId: the receipt is already in Bitrix.
+      if (params?.filter?.xmlId) {
+        return { data: { result: { items: [{ id: 901, title: 'Bank receipt', xmlId: params.filter.xmlId }] } } };
+      }
+      return null;
+    }
+  });
+
+  const { importBankTransaction } = await import('../src/services/matchEngine.js');
+  const result = await importBankTransaction({
+    transactionId: 'TX-1',
+    amount: 1000,
+    currency: 'AMD',
+    paymentDate: '2026-11-14',
+    purpose: 'test'
+  });
+
+  assert.equal(result.created, false);
+
+  // Give anything that was kicked off in the background a chance to show up in `calls`.
+  await new Promise((resolve) => setTimeout(resolve, 200));
+
+  const listCalls = calls.filter((method) => method === 'crm.item.list.json').length;
+  assert.equal(listCalls, 1, `only the xmlId lookup may run, saw ${listCalls} list calls`);
+});
