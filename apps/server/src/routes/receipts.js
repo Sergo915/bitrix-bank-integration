@@ -7,7 +7,9 @@ import {
   listCachedReceipts,
   listReceipts,
   normalizeApartmentSearchInput,
+  restoreReceiptOnBoard,
   searchDeals,
+  trashReceiptOnBoard,
   undoMatch
 } from '../services/matchEngine.js';
 import { requireBitrixSession } from '../services/bitrixSession.js';
@@ -30,6 +32,7 @@ receiptsRouter.post('/trash', async (req, res, next) => {
   try {
     const { receiptId } = z.object({ receiptId: z.string().regex(/^\d+$/) }).parse(req.body);
     await trashReceipt(receiptId);
+    await trashReceiptOnBoard(receiptId);
     res.json({ ok: true, receiptId });
   } catch (error) {
     next(error);
@@ -40,6 +43,7 @@ receiptsRouter.post('/trash/restore', async (req, res, next) => {
   try {
     const { receiptId } = z.object({ receiptId: z.string().regex(/^\d+$/) }).parse(req.body);
     await restoreReceipt(receiptId);
+    await restoreReceiptOnBoard(receiptId);
     res.json({ ok: true, receiptId });
   } catch (error) {
     next(error);

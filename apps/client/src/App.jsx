@@ -20,6 +20,7 @@ import {
   searchDeals,
   undoMatch
 } from './lib/api.js';
+import { activityFromResponse, applyMatchToBoard, applyUndoToBoard, revertMatchOnBoard } from './lib/board.js';
 import './styles.css';
 
 const BUILDING_OPTIONS = [
@@ -30,6 +31,8 @@ const BUILDING_OPTIONS = [
 
 const TRANSFER_PURPOSE_PREFIX = 'Միջոցների տեղափոխում';
 const FREEZE_PURPOSE_FRAGMENT = 'սառեց';
+// Every date and time in the app is shown in Yerevan time, whatever the viewer's own zone is.
+const YEREVAN_TIME_ZONE = 'Asia/Yerevan';
 
 export default function App() {
   const [board, setBoard] = useState({ unmatched: [], matched: [], trashed: [], log: [] });
@@ -71,6 +74,10 @@ export default function App() {
   const selectedReceipt =
     visibleUnmatched.find((receipt) => receipt.id === selectedReceiptId) ?? visibleUnmatched[0] ?? board.unmatched[0] ?? null;
   const receiptQueue = board.unmatched.filter((receipt) => receipt.suggestions?.length && !isMatchQueued(receipt.id));
+  const matchedReceiptIds = useMemo(
+    () => new Set(board.matched.map((receipt) => String(receipt.id))),
+    [board.matched]
+  );
   const activeReceipt = suggestionModalClosed ? null : receiptQueue[receiptQueueIndex] ?? null;
   const selectedModalSuggestion =
     activeReceipt?.suggestions.find((suggestion) => getSuggestionId(suggestion) === selectedSuggestionId) ??
@@ -119,7 +126,7 @@ export default function App() {
     setConfirmingReceiptIds((current) => [...current, String(receiptId)]);
 
     try {
-      await confirmMatch({
+      const result = await confirmMatch({
         receiptId,
         dealId,
         scheduleIds
@@ -128,12 +135,15 @@ export default function App() {
       });
       setSelectedDeal(null);
       setManualDeals([]);
-      await refreshData(true);
+      // The card already moved when the match was confirmed; this records the history entry.
+      setBoard((current) => applyMatchToBoard(current, receiptId, dealId, activityFromResponse(result)));
       return true;
     } catch (err) {
       if (err.name !== 'AbortError') {
         setError(err.message);
       }
+      // Bitrix never accepted the match, so the card goes back among the unmatched receipts.
+      setBoard((current) => revertMatchOnBoard(current, receiptId));
       return false;
     } finally {
       setConfirmingReceiptIds((current) => current.filter((id) => id !== String(receiptId)));
@@ -164,11 +174,19 @@ export default function App() {
       seconds: 30
     }]);
 
+    // The card belongs in the matched column from here on. Waiting for the countdown and the
+    // Bitrix round trip left it sitting among the unmatched receipts for half a minute.
+    setBoard((current) => applyMatchToBoard(current, nextReceiptId, dealId));
+    setSelectedReceiptId('');
+    setSelectedSuggestionId('');
+
     return true;
   }
 
   function cancelPendingMatch(jobKey) {
-    setPendingMatches((current) => current.filter((match) => match.jobKey !== jobKey));
+    const match = pendingMatches.find((item) => item.jobKey === jobKey);
+    if (match) setBoard((board) => revertMatchOnBoard(board, match.receiptId));
+    setPendingMatches((current) => current.filter((item) => item.jobKey !== jobKey));
   }
 
   function startMatchNow(match) {
@@ -195,19 +213,18 @@ export default function App() {
   }
 
   function cancelProcessingMatch(jobKey) {
-    setProcessingMatches((current) => {
-      const match = current.find((item) => item.jobKey === jobKey);
-      match?.controller?.abort();
-      return current.filter((item) => item.jobKey !== jobKey);
-    });
+    const match = processingMatches.find((item) => item.jobKey === jobKey);
+    match?.controller?.abort();
+    if (match) setBoard((board) => revertMatchOnBoard(board, match.receiptId));
+    setProcessingMatches((current) => current.filter((item) => item.jobKey !== jobKey));
   }
 
   function cancelAllMatches() {
+    const cancelled = [...pendingMatches, ...processingMatches];
+    processingMatches.forEach((match) => match.controller?.abort());
+    setBoard((board) => cancelled.reduce((next, match) => revertMatchOnBoard(next, match.receiptId), board));
     setPendingMatches([]);
-    setProcessingMatches((current) => {
-      current.forEach((match) => match.controller?.abort());
-      return [];
-    });
+    setProcessingMatches([]);
   }
 
   async function handleUndoMatch(receiptId, dealId) {
@@ -225,8 +242,8 @@ export default function App() {
     setUndoingReceiptIds((current) => [...current, nextReceiptId]);
 
     try {
-      await undoMatch({ receiptId: nextReceiptId, dealId });
-      await refreshData(true);
+      const result = await undoMatch({ receiptId: nextReceiptId, dealId });
+      setBoard((current) => applyUndoToBoard(current, nextReceiptId, activityFromResponse(result)));
       return true;
     } catch (err) {
       setError(err.message);
@@ -419,6 +436,17 @@ export default function App() {
           <h1>Բանկային կտրոնների համադրում</h1>
         </div>
         <div className="top-actions">
+          <button
+            className="refresh-button"
+            disabled={loading}
+            type="button"
+            onClick={() => refreshData(true)}
+            aria-label={'Թարմացնել'}
+            title={'Թարմացնել տվյալները'}
+          >
+            <RefreshCw className={loading ? 'spinning' : ''} size={20} />
+            {loading ? 'Թարմացվում է' : 'Թարմացնել'}
+          </button>
           {receiptQueue.length ? (
             <button
               className="smart-match-button"
@@ -550,6 +578,7 @@ export default function App() {
           log={board.log}
           onClose={() => setHistoryOpen(false)}
           receipts={[...board.unmatched, ...board.matched, ...(board.trashed ?? [])]}
+          matchedReceiptIds={matchedReceiptIds}
           onUndoMatch={handleUndoMatch}
           undoingReceiptIds={undoingReceiptIds}
         />
@@ -712,14 +741,14 @@ function SuggestionModal({
     </div>
   );
 }
-function HistoryModal({ log, onClose, receipts, onUndoMatch, undoingReceiptIds }) {
+function HistoryModal({ log, onClose, receipts, matchedReceiptIds, onUndoMatch, undoingReceiptIds }) {
   const [historyType, setHistoryType] = useState('matched');
   const [matchActionFilter, setMatchActionFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState({ from: '', to: '' });
   const receiptById = new Map(receipts.map((receipt) => [String(receipt.id), receipt]));
   const matchHistoryLog = log.filter((item) => isMatchHistoryActivity(item.action));
   const filteredMatchHistoryLog = filterMatchHistoryByAction(matchHistoryLog, matchActionFilter);
-  const undoableActivityIds = getUndoableMatchActivityIds(matchHistoryLog);
+  const undoableActivityIds = getUndoableMatchActivityIds(matchHistoryLog, matchedReceiptIds);
   const createdLog = log.filter((item) => isCreatedReceiptActivity(item.action));
   const visibleLog = filterHistoryByDate(historyType === 'matched' ? filteredMatchHistoryLog : createdLog, dateFilter);
   const visibleSummary = getHistoryAmountSummary(visibleLog, receiptById);
@@ -814,12 +843,14 @@ function HistoryModal({ log, onClose, receipts, onUndoMatch, undoingReceiptIds }
             const canUndo = historyType === 'matched' && dealId && undoableActivityIds.has(item.id);
             const undoing = undoingReceiptIds.includes(String(item.receiptId));
             const amountLabel = getReceiptHistoryAmount(item, receiptById);
+            const payerLabel = getReceiptHistoryPayer(item, receiptById);
 
             return (
               <div className={`activity-row ${canUndo ? 'with-action' : ''}`} key={item.id}>
                 <span>{formatArmenianDateTime(item.createdAt)}</span>
                 <div className="history-receipt-details">
                   <strong>{getReceiptHistoryTitle(item, receiptById)}</strong>
+                  {payerLabel ? <span className="history-receipt-payer">{payerLabel}</span> : null}
                   <b className="history-receipt-amount">
                     <Banknote size={15} aria-hidden="true" />
                     {amountLabel}
@@ -1099,6 +1130,13 @@ function getReceiptHistoryTitle(item, receiptById) {
   return receipt?.bitrixTitle || receipt?.bankTransactionId || item.receiptTitle || item.bankTransactionId || `#${item.receiptId}`;
 }
 
+// The board is the better source while the receipt is still on it; the activity entry carries
+// the payer as a fallback for receipts that have since been archived or removed.
+function getReceiptHistoryPayer(item, receiptById) {
+  const receipt = receiptById.get(String(item.receiptId));
+  return String(receipt?.payerName ?? item.payerName ?? '').trim();
+}
+
 function getReceiptHistoryAmount(item, receiptById) {
   const receipt = receiptById.get(String(item.receiptId));
   const amount = Number(receipt?.amount ?? item.amount);
@@ -1134,7 +1172,7 @@ function getHistoryAmountSummary(items, receiptById) {
   };
 }
 
-function getUndoableMatchActivityIds(items) {
+function getUndoableMatchActivityIds(items, matchedReceiptIds) {
   const latestByPair = new Map();
 
   for (const item of items) {
@@ -1156,9 +1194,13 @@ function getUndoableMatchActivityIds(items) {
     }
   }
 
+  // The activity log alone is not enough: it can be stale, and an "already unlinked" undo
+  // writes no entry at all. A receipt that is not matched right now cannot be moved back, so
+  // the button is hidden instead of inviting an action that would do nothing.
   return new Set(
     [...latestByPair.values()]
       .filter((item) => getMatchedDealId(item.action))
+      .filter((item) => matchedReceiptIds.has(String(item.receiptId)))
       .map((item) => item.id)
   );
 }
@@ -1197,7 +1239,7 @@ function getArmenianDateKey(value) {
   const parts = new Intl.DateTimeFormat('en-CA', {
     day: '2-digit',
     month: '2-digit',
-    timeZone: 'Asia/Yerevan',
+    timeZone: YEREVAN_TIME_ZONE,
     year: 'numeric'
   }).formatToParts(date);
   const year = parts.find((part) => part.type === 'year')?.value;
@@ -1246,7 +1288,7 @@ function formatArmenianDateTime(value) {
   return new Intl.DateTimeFormat('hy-AM', {
     dateStyle: 'short',
     timeStyle: 'medium',
-    timeZone: 'Asia/Yerevan'
+    timeZone: YEREVAN_TIME_ZONE
   }).format(date);
 }
 
@@ -1647,7 +1689,15 @@ function formatDate(value) {
     return '';
   }
 
-  return new Date(value).toLocaleDateString('hy-AM');
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  // Bitrix and the activity log store timestamps in UTC. Without an explicit zone the browser
+  // used its own, so a manager outside Armenia saw dates shifted by a day near midnight.
+  return new Intl.DateTimeFormat('hy-AM', { dateStyle: 'short', timeZone: YEREVAN_TIME_ZONE }).format(date);
 }
 
 function formatScheduleStatus(status) {

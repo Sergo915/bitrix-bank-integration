@@ -14,7 +14,7 @@
     "dev:client": "npm --workspace apps/client run dev",
     "build": "npm --workspaces run build",
     "lint": "npm --workspaces run lint",
-    "test": "npm --workspace apps/server run test",
+    "test": "npm --workspaces --if-present run test",
     "format": "prettier --write ."
   },
   "devDependencies": {

@@ -348,7 +348,13 @@ function formatMoney(value, currency = 'AMD') {
 function formatDate(value) {
   if (!value) return '—';
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('hy-AM');
+  if (Number.isNaN(date.getTime())) return String(value);
+  // Stored timestamps are UTC, so the zone is pinned to Yerevan instead of the viewer's own.
+  return new Intl.DateTimeFormat('hy-AM', {
+    dateStyle: 'short',
+    timeStyle: 'medium',
+    timeZone: 'Asia/Yerevan'
+  }).format(date);
 }
 
 

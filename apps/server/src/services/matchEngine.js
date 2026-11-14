@@ -110,6 +110,8 @@ const matchLocks = new Map();
 const dealLocks = new Map();
 let stagesPromise = null;
 let receiptBoardLoadPromise = null;
+let receiptBoardLoadGeneration = -1;
+let receiptBoardGeneration = 0;
 let receiptBoardCacheLoaded = false;
 let receiptBoardCache = null;
 let receiptBoardCacheWriteQueue = Promise.resolve();
@@ -240,7 +242,7 @@ export function listReceipts() {
 
 export async function listCachedReceipts() {
   await ensureReceiptBoardCacheLoaded();
-  if (receiptBoardCache?.board) {
+  if (hasCacheableReceipts(receiptBoardCache?.board)) {
     if (Date.now() - receiptBoardCache.updatedAt >= env.RECEIPT_BOARD_CACHE_TTL_MS) {
       refreshReceiptBoardCache().catch((error) => {
         console.error('Could not refresh receipt board cache:', error.message);
@@ -251,19 +253,213 @@ export async function listCachedReceipts() {
   return refreshReceiptBoardCache();
 }
 
-export function refreshReceiptBoardCache() {
-  if (receiptBoardLoadPromise) return receiptBoardLoadPromise;
+// A failing or throttled Bitrix returns no vouchers, which loadReceipts() reports as a
+// perfectly good empty board. Caching one hid every real receipt behind an empty page until
+// the TTL expired, and the file on disk survived restarts. An empty board is also the one
+// board that is cheap to rebuild, since loadReceipts() short-circuits before deals and
+// schedules, so it is never worth storing.
+function hasCacheableReceipts(board) {
+  return Boolean(board?.unmatched?.length || board?.matched?.length || board?.trashed?.length);
+}
 
-  receiptBoardLoadPromise = loadReceipts()
+export function refreshReceiptBoardCache() {
+  // A load started before the last change must not be shared or stored: it would answer a
+  // post-change request with a pre-change board and then cache it as if it were current.
+  if (receiptBoardLoadPromise && receiptBoardLoadGeneration === receiptBoardGeneration) {
+    return receiptBoardLoadPromise;
+  }
+
+  const generation = receiptBoardGeneration;
+  const supersededLoad = receiptBoardLoadPromise;
+  const currentPromise = Promise.resolve(supersededLoad)
+    .catch(() => undefined)
+    .then(() => loadReceipts())
     .then(async (board) => {
-      receiptBoardCache = { updatedAt: Date.now(), board };
-      await persistReceiptBoardCache();
+      if (generation === receiptBoardGeneration && hasCacheableReceipts(board)) {
+        receiptBoardCache = { updatedAt: Date.now(), board };
+        await persistReceiptBoardCache();
+      }
       return board;
     })
     .finally(() => {
-      receiptBoardLoadPromise = null;
+      if (receiptBoardLoadPromise === currentPromise) receiptBoardLoadPromise = null;
     });
-  return receiptBoardLoadPromise;
+
+  receiptBoardLoadPromise = currentPromise;
+  receiptBoardLoadGeneration = generation;
+  return currentPromise;
+}
+
+// Rebuilding the board costs around two minutes, so a change is applied to the cached copy
+// instead of throwing it away: readers keep getting an instant board, and it already reflects
+// what just happened. A full refresh still runs in the background for the derived figures
+// (schedule balances, suggestions) that only loadReceipts() can recompute.
+async function updateCachedBoardReceipt(receiptId, change, { target = 'auto', refresh = true, bump = true } = {}) {
+  // Bumped before anything is awaited, so a load already in flight cannot overwrite the cache.
+  if (bump) receiptBoardGeneration += 1;
+
+  const id = String(receiptId ?? '');
+
+  // The cache is read from disk lazily. Without this the first change after a restart would
+  // patch nothing and the stale board on disk would be served again.
+  try {
+    await ensureReceiptBoardCacheLoaded();
+  } catch (error) {
+    console.error('Could not read the receipt board cache before patching it:', error.message);
+  }
+
+  const board = receiptBoardCache?.board;
+
+  if (id && board) {
+    const columns = ['unmatched', 'matched', 'trashed'];
+    const column = columns.find((name) => (board[name] ?? []).some((item) => String(item.id) === id));
+
+    if (column) {
+      const receipt = board[column].find((item) => String(item.id) === id);
+      const updated = { ...receipt, ...change };
+      const byStatus = updated.status === 'matched' ? 'matched' : 'unmatched';
+      // 'auto' keeps a receipt in the trash where it is: a match or undo must not quietly pull
+      // it back onto the board. 'trashed' and 'active' are the explicit trash moves.
+      const destination = target === 'auto'
+        ? (column === 'trashed' ? 'trashed' : byStatus)
+        : (target === 'trashed' ? 'trashed' : byStatus);
+      const next = { ...board };
+
+      for (const name of columns) next[name] = (board[name] ?? []).filter((item) => String(item.id) !== id);
+      next[destination] = [updated, ...next[destination]];
+      receiptBoardCache = { updatedAt: receiptBoardCache.updatedAt, board: next };
+      persistReceiptBoardCache().catch((error) => {
+        console.error('Could not persist the patched receipt board cache:', error.message);
+      });
+    }
+  }
+
+  if (refresh) {
+    refreshReceiptBoardCache().catch((error) => {
+      console.error('Could not refresh receipt board cache:', error.message);
+    });
+  }
+}
+
+// Trashing is a filter over receipts the board already holds -- it changes nothing in Bitrix.
+// Rebuilding for it cost two minutes of Bitrix traffic and CPU per click, and because each
+// click also invalidated the board, rebuilds kept superseding one another and discarding their
+// results: the cache went unwritten for minutes, so reopening the app showed the receipt back
+// in the trash and receipts created meanwhile never appeared at all.
+//
+// The generation is deliberately left alone here. loadReceipts() reads the trash store as its
+// final step, so a rebuild already in flight picks the change up by itself, and the periodic
+// warm-up corrects the one-step window where it does not.
+const TRASH_PATCH = { refresh: false, bump: false };
+
+export function trashReceiptOnBoard(receiptId) {
+  return updateCachedBoardReceipt(receiptId, {}, { ...TRASH_PATCH, target: 'trashed' });
+}
+
+export function restoreReceiptOnBoard(receiptId) {
+  return updateCachedBoardReceipt(receiptId, {}, { ...TRASH_PATCH, target: 'active' });
+}
+
+// Bitrix tells us about a receipt created or edited outside the app, so that one receipt is
+// fetched and placed on the cached board. Waiting for the periodic rebuild instead meant up to
+// three and a half minutes before it showed up at all.
+//
+// Its suggestions stay empty until that rebuild: computing them needs every schedule and deal,
+// which is the expensive part. The receipt is visible and matchable by hand in the meantime.
+export async function applyReceiptEventToBoard({ id, entityTypeId, event } = {}) {
+  const receiptId = String(id ?? '').trim();
+
+  if (!receiptId) return { applied: false, reason: 'event carried no receipt id' };
+
+  if (entityTypeId !== undefined && entityTypeId !== null && String(entityTypeId) !== ''
+    && String(entityTypeId) !== String(TYPES.voucher.entityTypeId)) {
+    return { applied: false, reason: `entity type ${entityTypeId} is not the receipt process` };
+  }
+
+  if (String(event ?? '').toUpperCase().includes('DELETE')) {
+    return { applied: await removeCachedBoardReceipt(receiptId), reason: 'deleted' };
+  }
+
+  const [stages, item] = await Promise.all([getStages(), getBitrixVoucher(receiptId)]);
+
+  if (Number(item?.categoryId) !== TYPES.voucher.categoryId) {
+    return { applied: false, reason: 'receipt is outside the bank receipt category' };
+  }
+
+  return { applied: await upsertCachedBoardReceipt(mapVoucherData(item, stages)), reason: 'upserted' };
+}
+
+async function withCachedBoard(mutate) {
+  // Bumped so a rebuild that started before the event cannot overwrite the result.
+  receiptBoardGeneration += 1;
+
+  try {
+    await ensureReceiptBoardCacheLoaded();
+  } catch (error) {
+    console.error('Could not read the receipt board cache before patching it:', error.message);
+  }
+
+  const board = receiptBoardCache?.board;
+
+  // With nothing cached yet there is nothing to patch; the next rebuild covers it.
+  if (!board) return false;
+
+  const next = mutate(board);
+  if (!next) return false;
+
+  receiptBoardCache = { updatedAt: receiptBoardCache.updatedAt, board: next };
+  await persistReceiptBoardCache();
+  return true;
+}
+
+function upsertCachedBoardReceipt(receipt) {
+  const id = String(receipt.id);
+
+  return withCachedBoard((board) => {
+    const columns = ['unmatched', 'matched', 'trashed'];
+    const existing = columns
+      .map((name) => (board[name] ?? []).find((item) => String(item.id) === id))
+      .find(Boolean);
+    const inTrash = (board.trashed ?? []).some((item) => String(item.id) === id);
+    // Keep whatever suggestions the last rebuild worked out for a receipt we already knew.
+    const merged = { ...existing, ...receipt, suggestions: existing?.suggestions ?? [] };
+    const destination = inTrash ? 'trashed' : (merged.status === 'matched' ? 'matched' : 'unmatched');
+    const next = { ...board };
+
+    for (const name of columns) next[name] = (board[name] ?? []).filter((item) => String(item.id) !== id);
+    next[destination] = [merged, ...next[destination]];
+    return next;
+  });
+}
+
+function removeCachedBoardReceipt(receiptId) {
+  const id = String(receiptId);
+
+  return withCachedBoard((board) => {
+    const columns = ['unmatched', 'matched', 'trashed'];
+    if (!columns.some((name) => (board[name] ?? []).some((item) => String(item.id) === id))) return null;
+
+    const next = { ...board };
+    for (const name of columns) next[name] = (board[name] ?? []).filter((item) => String(item.id) !== id);
+    return next;
+  });
+}
+
+// Test-only, the counterpart of resetStageCache(): the cached board and its one-time read from
+// disk are module state, so a test that seeds its own cache file has to clear them first.
+export function resetReceiptBoardCache() {
+  receiptBoardCache = null;
+  receiptBoardCacheLoaded = false;
+  receiptBoardLoadPromise = null;
+  receiptBoardLoadGeneration = -1;
+  receiptBoardGeneration += 1;
+}
+
+export function invalidateReceiptBoard() {
+  receiptBoardGeneration += 1;
+  refreshReceiptBoardCache().catch((error) => {
+    console.error('Could not refresh receipt board cache:', error.message);
+  });
 }
 
 async function ensureReceiptBoardCacheLoaded() {
@@ -337,6 +533,8 @@ export async function importBankTransaction(input) {
 
   const importPromise = createBankReceiptOnce(transaction).finally(() => {
     receiptImportLocks.delete(transactionId);
+    // A brand new receipt cannot be synthesised into the cached board, so it is refreshed.
+    invalidateReceiptBoard();
   });
   receiptImportLocks.set(transactionId, importPromise);
   return importPromise;
@@ -405,16 +603,34 @@ export async function confirmMatch(payload) {
   const receiptId = String(payload.receiptId);
   const dealId = String(payload.dealId);
   const alreadyProcessing = matchLocks.has(receiptId);
-  const result = await runWithKeyedLock(matchLocks, receiptId, () =>
-    runWithKeyedLock(dealLocks, dealId, () => confirmMatchOnce(payload))
-  );
 
-  return alreadyProcessing ? { ...result, alreadyProcessing: true } : result;
+  try {
+    const result = await runWithKeyedLock(matchLocks, receiptId, () =>
+      runWithKeyedLock(dealLocks, dealId, () => confirmMatchOnce(payload))
+    );
+
+    await updateCachedBoardReceipt(receiptId, { status: 'matched', matchedDealId: dealId, suggestions: [] });
+    return alreadyProcessing ? { ...result, alreadyProcessing: true } : result;
+  } catch (error) {
+    // A failed match can still have written to Bitrix before rolling back, so the cached board
+    // is no longer trustworthy; only a full reload can say what the real state is.
+    invalidateReceiptBoard();
+    throw error;
+  }
 }
 
 export async function undoMatch(payload) {
   const receiptId = String(payload.receiptId);
-  return runWithKeyedLock(matchLocks, receiptId, () => undoMatchOnce(payload));
+
+  try {
+    const result = await runWithKeyedLock(matchLocks, receiptId, () => undoMatchOnce(payload));
+
+    await updateCachedBoardReceipt(receiptId, { status: 'unmatched', matchedDealId: null, suggestions: [] });
+    return result;
+  } catch (error) {
+    invalidateReceiptBoard();
+    throw error;
+  }
 }
 
 async function confirmMatchOnce({ receiptId, dealId, scheduleIds = [] }) {
@@ -465,7 +681,8 @@ async function confirmMatchOnce({ receiptId, dealId, scheduleIds = [] }) {
     receiptUpdated = true;
 
     const recalculation = await recalculateDealSchedules(deal, stages, receiptIds);
-    await addActivity({
+    const activity = await addActivity({
+      ...describeReceiptForActivity(receipt),
       receiptId,
       action: `Receipt matched with Deal #${dealId}; schedules recalculated`,
       actor: 'Manager'
@@ -476,7 +693,8 @@ async function confirmMatchOnce({ receiptId, dealId, scheduleIds = [] }) {
       id: receiptId,
       matchedDealId: dealId,
       matchedScheduleIds: scheduleIds,
-      recalculation
+      recalculation,
+      activity
     };
   } catch (error) {
     const rollbackErrors = [];
@@ -558,18 +776,20 @@ async function undoMatchForDeal({ receipt, receiptId, dealId, linkedDealId, stag
       excludeReceiptIds: [receiptId]
     });
 
-    if (linkedDealId) {
-      await addActivity({
+    const activity = linkedDealId
+      ? await addActivity({
+        ...describeReceiptForActivity(receipt),
         receiptId,
         action: `Receipt unlinked from Deal #${dealId}; schedules recalculated`,
         actor: 'Manager'
-      });
-    }
+      })
+      : null;
 
     return {
       id: receiptId,
       unmatchedDealId: dealId,
-      recalculation
+      recalculation,
+      activity
     };
   } catch (error) {
     const rollbackErrors = [];
@@ -591,6 +811,20 @@ async function undoMatchForDeal({ receipt, receiptId, dealId, linkedDealId, stag
     }
     throw error;
   }
+}
+
+// The client adds the new history row from this entry instead of waiting for the next full
+// board load, so the entry has to carry everything the history list renders on its own.
+function describeReceiptForActivity(receipt) {
+  const amount = Number(receipt?.[TYPES.voucher.fields.amount] ?? receipt?.opportunity ?? 0);
+
+  return {
+    bankTransactionId: receipt?.[TYPES.voucher.fields.bankTransactionId] || receipt?.xmlId || null,
+    receiptTitle: receipt?.title ?? null,
+    payerName: receipt?.[TYPES.voucher.fields.payerName] ?? null,
+    amount: Number.isFinite(amount) && amount !== 0 ? amount : null,
+    currency: receipt?.currencyId || 'AMD'
+  };
 }
 
 function isAlreadyMatchedWithDeal(receipt, dealId, stages) {

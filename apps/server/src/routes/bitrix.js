@@ -4,12 +4,15 @@ import { env } from '../config/env.js';
 import { assertAllowedBitrixDomain, callBitrixMethod, exchangeBitrixCode, getBitrixStatus } from '../services/bitrixClient.js';
 import {
   assertBitrixApplicationRequest,
+  assertBitrixEventRequest,
   createBitrixSession,
   getBitrixSession,
   getClientIndexPath,
   normalizeBitrixAuth,
+  readBitrixEventAuth,
   rememberInstallation
 } from '../services/bitrixSession.js';
+import { applyReceiptEventToBoard } from '../services/matchEngine.js';
 
 export const bitrixRouter = Router();
 
@@ -32,6 +35,35 @@ bitrixRouter.post('/webhook/test', async (_req, res, next) => {
 
 // Bitrix calls this endpoint server-to-server when the local application is
 // installed with "Application completes installation itself" enabled.
+// Bitrix calls this when a receipt is added, changed or deleted in the smart process, so a
+// receipt created outside the app reaches the board in a second or two instead of waiting for
+// the periodic rebuild. Bitrix retries handlers that answer slowly, so it answers first and
+// does the work afterwards.
+bitrixRouter.post('/events/receipt', async (req, res, next) => {
+  try {
+    await assertBitrixEventRequest(readBitrixEventAuth(req.body, req.query));
+  } catch (error) {
+    next(error);
+    return;
+  }
+
+  const fields = req.body?.data?.FIELDS ?? req.body?.data?.fields ?? {};
+  const event = req.body?.event ?? '';
+  res.json({ ok: true });
+
+  try {
+    const result = await applyReceiptEventToBoard({
+      id: fields.ID ?? fields.id,
+      entityTypeId: fields.ENTITY_TYPE_ID ?? fields.entityTypeId,
+      event
+    });
+
+    if (!result.applied) console.log(`Bitrix ${event} ignored: ${result.reason}`);
+  } catch (error) {
+    console.error(`Could not apply Bitrix ${event} to the board:`, error.message);
+  }
+});
+
 bitrixRouter.post('/install', async (req, res, next) => {
   try {
     const auth = normalizeBitrixAuth(req.body, req.query);

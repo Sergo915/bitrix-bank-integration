@@ -40,6 +40,43 @@ export function normalizeBitrixAuth(body = {}, query = {}) {
   };
 }
 
+// An event request carries no access token -- an outgoing webhook sends only the domain, the
+// member id and the application token from its own form -- so it cannot go through
+// normalizeBitrixAuth(), which requires one.
+export function readBitrixEventAuth(body = {}, query = {}) {
+  const read = (...keys) => {
+    for (const source of [body?.auth, body, query]) {
+      for (const key of keys) {
+        const value = source?.[key];
+        if (value !== undefined && value !== null && value !== '') return String(value).trim();
+      }
+    }
+    return '';
+  };
+
+  return {
+    domain: read('domain', 'DOMAIN').toLowerCase(),
+    memberId: read('member_id', 'MEMBER_ID'),
+    applicationToken: read('application_token', 'APPLICATION_TOKEN')
+  };
+}
+
+export async function assertBitrixEventRequest(auth) {
+  if (!auth?.applicationToken) {
+    throw httpError(403, 'Bitrix event authorization is required');
+  }
+
+  if (auth.domain) assertAllowedBitrixDomain(auth.domain);
+
+  // The token shown in the outgoing webhook form is the shared secret for its events.
+  if (env.BITRIX_EVENT_TOKEN && safeEqual(hashSecret(env.BITRIX_EVENT_TOKEN), hashSecret(auth.applicationToken))) {
+    return;
+  }
+
+  // An event bound by the local application is verified exactly like its handler requests.
+  await assertBitrixApplicationRequest(auth);
+}
+
 export async function rememberInstallation(auth) {
   if (!auth?.memberId || !auth.applicationToken) {
     throw new Error('Bitrix installation auth is incomplete');

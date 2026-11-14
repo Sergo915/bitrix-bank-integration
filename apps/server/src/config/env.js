@@ -27,6 +27,8 @@ const envSchema = z.object({
   BITRIX_SESSION_TTL_MS: z.coerce.number().int().min(300000).max(86400000).default(3600000),
   BITRIX_INSTALLATION_STORE_PATH: optionalString.default('data/bitrix-installations.json'),
   BITRIX_APPLICATION_TOKEN: optionalString,
+  // Token from the Bitrix outgoing webhook form, used to verify its event requests.
+  BITRIX_EVENT_TOKEN: optionalString,
   CLIENT_DIST_PATH: optionalString.default('apps/client/dist'),
   BITRIX_WEBHOOK_URL: optionalUrl,
   BITRIX_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(10000).max(300000).default(90000),
