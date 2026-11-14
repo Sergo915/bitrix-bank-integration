@@ -655,6 +655,31 @@ a.bitrix-link-button {
   white-space: nowrap;
 }
 
+/* Deliberately quieter than the refresh button next to it: a full rebuild takes minutes and
+   is the exception, not the thing to reach for. */
+.rebuild-button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid #e3e9f0;
+  color: #8296ad;
+  display: inline-flex;
+  font-weight: 650;
+  gap: 6px;
+  min-height: 46px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.rebuild-button:hover:not(:disabled) {
+  background: #f8fbfd;
+  color: #536985;
+}
+
+.rebuild-button:disabled {
+  cursor: progress;
+  opacity: 0.55;
+}
+
 .refresh-button:hover:not(:disabled) {
   background: #f8fbfd;
   color: #0f6d8c;

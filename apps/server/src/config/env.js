@@ -26,6 +26,8 @@ const envSchema = z.object({
   BITRIX_SESSION_COOKIE_NAME: optionalString.default('milon_bitrix_session'),
   BITRIX_SESSION_TTL_MS: z.coerce.number().int().min(300000).max(86400000).default(3600000),
   BITRIX_INSTALLATION_STORE_PATH: optionalString.default('data/bitrix-installations.json'),
+  // Sessions live here so a restart does not sign every manager out mid-shift.
+  BITRIX_SESSION_STORE_PATH: optionalString.default('data/bitrix-sessions.json'),
   BITRIX_APPLICATION_TOKEN: optionalString,
   // Token from the Bitrix outgoing webhook form, used to verify its event requests.
   BITRIX_EVENT_TOKEN: optionalString,
@@ -53,6 +55,15 @@ const envSchema = z.object({
   ACTIVITY_LOG_PATH: optionalString,
   RECEIPT_BOARD_CACHE_PATH: optionalString.default('data/receipt-board-cache.json'),
   RECEIPT_BOARD_CACHE_TTL_MS: z.coerce.number().int().min(5000).default(60000),
+  // A delta sync asks Bitrix only for the receipts touched since the last one: one request,
+  // a few hundred milliseconds. It is what keeps the board current between full rebuilds.
+  RECEIPT_BOARD_SYNC_OVERLAP_MS: z.coerce.number().int().min(0).default(120000),
+  // A full rebuild walks every voucher, deal and contact and costs minutes, so it runs on a
+  // slow clock of its own instead of being retriggered by every stale read.
+  RECEIPT_BOARD_FULL_REBUILD_MS: z.coerce.number().int().min(60000).default(1800000),
+  // Document-number lookups are the expensive part of a rebuild (one Bitrix call per payer
+  // whose contact is not found by the bulk filter), and contacts barely change.
+  CONTACT_LOOKUP_CACHE_TTL_MS: z.coerce.number().int().min(0).default(3600000),
   DB_HOST: optionalString,
   DB_PORT: z.coerce.number().int().positive().default(3306),
   DB_NAME: optionalString.default('milon_ameria'),

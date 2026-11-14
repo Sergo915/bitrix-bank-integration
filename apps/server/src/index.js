@@ -8,7 +8,8 @@ import { adminRouter } from './routes/admin.js';
 import { bitrixRouter } from './routes/bitrix.js';
 import { healthRouter } from './routes/health.js';
 import { receiptsRouter } from './routes/receipts.js';
-import { refreshReceiptBoardCache } from './services/matchEngine.js';
+import { refreshReceiptBoardCache, syncReceiptBoard } from './services/matchEngine.js';
+import { loadPersistedSessions } from './services/bitrixSession.js';
 import { restoreAmeriaScheduler } from './services/syncService.js';
 
 const app = express();
@@ -35,6 +36,14 @@ app.use((error, _req, res, _next) => {
 
 app.listen(env.SERVER_PORT, async () => {
   console.log(`Server listening on http://localhost:${env.SERVER_PORT}`);
+
+  try {
+    const restored = await loadPersistedSessions();
+    if (restored) console.log(`Restored ${restored} Bitrix session(s)`);
+  } catch (error) {
+    console.error('Could not restore Bitrix sessions:', error.message);
+  }
+
   try {
     await restoreAmeriaScheduler();
   } catch (error) {
@@ -44,26 +53,41 @@ app.listen(env.SERVER_PORT, async () => {
   startReceiptBoardWarmUp();
 });
 
-// Rebuilding the board walks every voucher, deal and schedule in Bitrix and takes about two
-// minutes, which is longer than the proxy will wait. Bitrix's own guidance is to keep work
-// like this out of the request path, so it runs on a timer here and readers are always served
-// from the cache instead of waiting for a cold rebuild.
-// The gap is measured from the end of the previous rebuild, not from its start. On a fixed
-// interval a rebuild that takes longer than the interval means the next one starts the moment
-// it finishes: the process then rebuilds without pause, burning about half a core around the
-// clock and stalling interactive requests whenever it reaches its CPU-heavy phase.
+// Two clocks, because the two jobs cost three orders of magnitude apart.
+//
+// A delta sync asks Bitrix for the vouchers touched since the last one -- a single request,
+// a few hundred milliseconds -- and patches those receipts into the cached board. It is what
+// makes a receipt created in Bitrix show up in the app by itself.
+//
+// A full rebuild walks every voucher, deal and contact and takes minutes. It only exists for
+// the figures a delta cannot recompute: suggestions, schedule balances, the payment timeline.
+// Running it on the delta's clock was the old behaviour and it never stopped: a rebuild took
+// longer than the gap, so the next one began as soon as it ended, around the clock.
 function startReceiptBoardWarmUp() {
-  const gap = Math.max(env.RECEIPT_BOARD_CACHE_TTL_MS, 60000);
+  const syncGap = Math.max(env.RECEIPT_BOARD_CACHE_TTL_MS, 15000);
+  const rebuildGap = Math.max(env.RECEIPT_BOARD_FULL_REBUILD_MS, syncGap);
 
-  const warmUp = async () => {
+  const runSync = async () => {
     try {
-      await refreshReceiptBoardCache();
+      await syncReceiptBoard();
     } catch (error) {
-      console.error('Receipt board warm-up failed:', error.message);
+      console.error('Receipt board sync failed:', error.message);
     } finally {
-      scheduleAfter(warmUp, gap).unref();
+      scheduleAfter(runSync, syncGap).unref();
     }
   };
 
-  warmUp();
+  // Measured from the end of the previous rebuild, so a slow one cannot queue the next.
+  const runRebuild = async () => {
+    try {
+      await refreshReceiptBoardCache();
+    } catch (error) {
+      console.error('Receipt board rebuild failed:', error.message);
+    } finally {
+      scheduleAfter(runRebuild, rebuildGap).unref();
+    }
+  };
+
+  runRebuild();
+  scheduleAfter(runSync, syncGap).unref();
 }

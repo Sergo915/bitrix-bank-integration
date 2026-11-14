@@ -99,6 +99,27 @@ const STATUS_ELEMENT_IDS = {
   voucher: { new: 517, matched: 519 },
   schedule: { unpaid: 491, partial: 493, paid: 495 }
 };
+// Shared by the full listing and the delta sync, so a receipt arriving either way carries
+// exactly the same fields and mapVoucherData() never sees a half-populated item.
+const VOUCHER_SELECT = [
+  'id',
+  'title',
+  'xmlId',
+  TYPES.voucher.fields.bankTransactionId,
+  'stageId',
+  'parentId2',
+  'opportunity',
+  'currencyId',
+  'createdTime',
+  'updatedTime',
+  TYPES.voucher.fields.payerName,
+  TYPES.voucher.fields.amount,
+  TYPES.voucher.fields.paymentDate,
+  TYPES.voucher.fields.currencyEnum,
+  TYPES.voucher.fields.purpose,
+  TYPES.voucher.fields.payerDocument,
+  TYPES.voucher.fields.payerAddress
+];
 const DOCUMENT_PREFIX_LENGTH = 9;
 const MIN_DOCUMENT_PREFIX_LENGTH = 6;
 const MAX_CONTACT_LOOKUPS = 25;
@@ -118,6 +139,12 @@ let receiptBoardCacheWriteQueue = Promise.resolve();
 let recentDealsPromise = null;
 let recentDealsCache = null;
 let recentDealsGeneration = 0;
+// Delta syncs are cheap but must not interleave: two of them patching the same cached board
+// from different snapshots would lose one of the two sets of changes.
+let receiptSyncQueue = Promise.resolve();
+// Document-number lookups dominate a rebuild -- one Bitrix call per payer the bulk filter
+// misses -- and the answer is stable, so it is remembered between rebuilds.
+const contactIdsByDocumentPrefix = new Map();
 
 // Payment purposes arrive from several banks and are commonly typed with compact Armenian,
 // Russian, English, and transliterated abbreviations. Keep every field independent so forms
@@ -243,9 +270,13 @@ export function listReceipts() {
 export async function listCachedReceipts() {
   await ensureReceiptBoardCacheLoaded();
   if (hasCacheableReceipts(receiptBoardCache?.board)) {
+    // A stale board used to start a full rebuild here. That cost minutes, and because the
+    // rebuild could not finish before the next change invalidated it, the cache stayed stale
+    // and every single request started yet another one. A delta sync is one Bitrix request
+    // and brings the board up to date for everything except the recomputed figures.
     if (Date.now() - receiptBoardCache.updatedAt >= env.RECEIPT_BOARD_CACHE_TTL_MS) {
-      refreshReceiptBoardCache().catch((error) => {
-        console.error('Could not refresh receipt board cache:', error.message);
+      syncReceiptBoard({ reason: 'stale read' }).catch((error) => {
+        console.error('Could not sync receipt board:', error.message);
       });
     }
     return receiptBoardCache.board;
@@ -271,15 +302,35 @@ export function refreshReceiptBoardCache() {
 
   const generation = receiptBoardGeneration;
   const supersededLoad = receiptBoardLoadPromise;
+  const startedAt = Date.now();
   const currentPromise = Promise.resolve(supersededLoad)
     .catch(() => undefined)
     .then(() => loadReceipts())
     .then(async (board) => {
-      if (generation === receiptBoardGeneration && hasCacheableReceipts(board)) {
-        receiptBoardCache = { updatedAt: Date.now(), board };
-        await persistReceiptBoardCache();
+      if (!hasCacheableReceipts(board)) return board;
+
+      // A rebuild costs minutes, so throwing one away because a receipt was matched while it
+      // ran -- the old behaviour -- meant that on a busy board no rebuild ever landed and the
+      // cache went stale for a whole day. The fresh board is kept, and the handful of changes
+      // made during the rebuild are folded back on top by a delta sync, which is one request.
+      const superseded = generation !== receiptBoardGeneration;
+      receiptBoardCache = {
+        updatedAt: Date.now(),
+        // Anything Bitrix touched after the rebuild began may be missing from it.
+        syncedAt: new Date(startedAt).toISOString(),
+        board
+      };
+      await persistReceiptBoardCache();
+
+      if (!superseded) return board;
+
+      try {
+        await syncReceiptBoard({ reason: 'post-rebuild catch-up' });
+      } catch (error) {
+        console.error('Could not catch up after the receipt board rebuild:', error.message);
       }
-      return board;
+
+      return receiptBoardCache?.board ?? board;
     })
     .finally(() => {
       if (receiptBoardLoadPromise === currentPromise) receiptBoardLoadPromise = null;
@@ -290,10 +341,159 @@ export function refreshReceiptBoardCache() {
   return currentPromise;
 }
 
+// The targeted counterpart of a rebuild: it asks Bitrix only about the receipts that can have
+// changed -- the ones touched since the last sync, plus any the caller names explicitly, which
+// is how a match or an undo refreshes exactly the one or two receipts it touched -- and patches
+// those into the cached board. One Bitrix request in the ordinary case.
+export function syncReceiptBoard(options = {}) {
+  const run = () => syncReceiptBoardOnce(options);
+  const next = receiptSyncQueue.then(run, run);
+
+  receiptSyncQueue = next.then(() => undefined, () => undefined);
+  return next;
+}
+
+async function syncReceiptBoardOnce({ receiptIds = [], reason = 'poll' } = {}) {
+  await ensureReceiptBoardCacheLoaded();
+
+  const requestedIds = [...new Set(receiptIds.map((id) => String(id ?? '')).filter(Boolean))];
+
+  // With nothing cached there is no board to patch, so the first load has to be a full one.
+  if (!hasCacheableReceipts(receiptBoardCache?.board)) {
+    const board = await refreshReceiptBoardCache();
+    return { receipts: [], removedIds: [], rebuilt: true, syncedAt: receiptBoardCache?.syncedAt ?? null, board };
+  }
+
+  const startedAt = Date.now();
+  const since = getSyncSince();
+  const stages = await getStages();
+  const [updated, requested] = await Promise.all([
+    listBitrixVouchersUpdatedSince(since),
+    Promise.all(requestedIds.map((id) => readRequestedVoucher(id)))
+  ]);
+
+  const itemsById = new Map();
+  for (const item of updated) itemsById.set(String(item.id), item);
+
+  const removedIds = [];
+
+  for (const [index, result] of requested.entries()) {
+    if (result.item) itemsById.set(requestedIds[index], result.item);
+    // Only a receipt Bitrix positively reports as gone is taken off the board. Reading
+    // deletion out of an empty list answer instead would let one failed or filtered request
+    // erase a receipt that is still there.
+    else if (result.gone) removedIds.push(requestedIds[index]);
+  }
+
+  const receipts = [...itemsById.values()].map((item) => mapVoucherData(item, stages));
+  const suggestionsById = await getSuggestionsForNewReceipts(receipts, stages);
+
+  for (const receipt of receipts) {
+    const suggestions = suggestionsById.get(receipt.id);
+    await upsertCachedBoardReceipt(suggestions ? { ...receipt, suggestions } : receipt, { bump: false });
+  }
+  for (const id of removedIds) await removeCachedBoardReceipt(id, { bump: false });
+
+  if (receiptBoardCache) {
+    receiptBoardCache = {
+      ...receiptBoardCache,
+      updatedAt: Date.now(),
+      syncedAt: new Date(startedAt).toISOString(),
+      board: { ...receiptBoardCache.board, log: await getActivityLog() }
+    };
+    await persistReceiptBoardCache();
+  }
+
+  if (receipts.length || removedIds.length) {
+    console.log(`Receipt board sync (${reason}): ${receipts.length} updated, ${removedIds.length} removed`);
+  }
+
+  return {
+    receipts,
+    removedIds,
+    rebuilt: false,
+    syncedAt: receiptBoardCache?.syncedAt ?? null,
+    log: receiptBoardCache?.board?.log ?? []
+  };
+}
+
+// The window is widened a little because Bitrix stamps updatedTime on its own clock: without
+// the overlap a receipt saved in the same second as the previous sync is never seen again.
+function getSyncSince() {
+  const cached = receiptBoardCache?.syncedAt ? Date.parse(receiptBoardCache.syncedAt) : NaN;
+  const base = Number.isFinite(cached) ? cached : receiptBoardCache?.updatedAt;
+
+  if (!Number.isFinite(base)) return null;
+
+  return new Date(base - env.RECEIPT_BOARD_SYNC_OVERLAP_MS).toISOString();
+}
+
+function listBitrixVouchersUpdatedSince(since) {
+  if (!since) return Promise.resolve([]);
+
+  return listBitrixMethod('crm.item.list', {
+    entityTypeId: TYPES.voucher.entityTypeId,
+    order: { id: 'DESC' },
+    filter: { categoryId: TYPES.voucher.categoryId, '>=updatedTime': since },
+    select: VOUCHER_SELECT
+  });
+}
+
+// The precise read: one receipt, by id, straight from Bitrix. This is what a match or an undo
+// uses to confirm what Bitrix actually stored, instead of rebuilding the whole board for it.
+async function readRequestedVoucher(receiptId) {
+  let item;
+
+  try {
+    item = await getBitrixVoucher(receiptId);
+  } catch (error) {
+    // Bitrix rejects an id it does not have; anything else is a transport failure and says
+    // nothing about whether the receipt still exists.
+    const gone = error.status === 400 || /not\s*found|does not exist/iu.test(error.message ?? '');
+    if (!gone) console.warn(`Could not read receipt ${receiptId} from Bitrix: ${error.message}`);
+    return { item: null, gone };
+  }
+
+  if (!item?.id) return { item: null, gone: true };
+  // Moved out of the bank-receipt category: it no longer belongs on this board either.
+  if (Number(item.categoryId) !== TYPES.voucher.categoryId) return { item: null, gone: true };
+
+  return { item, gone: false };
+}
+
+// Suggestions need every deal and schedule, which is the expensive half of a rebuild, so they
+// are only computed for receipts the board has never seen. A receipt already on it keeps the
+// suggestions the last rebuild worked out. In the common case -- nothing new -- this costs
+// nothing at all.
+async function getSuggestionsForNewReceipts(receipts, stages) {
+  const board = receiptBoardCache?.board;
+  const known = new Set(
+    ['unmatched', 'matched', 'trashed'].flatMap((name) => (board?.[name] ?? []).map((item) => String(item.id)))
+  );
+  const fresh = receipts.filter((receipt) => receipt.status === 'unmatched' && !known.has(receipt.id));
+
+  if (!fresh.length) return new Map();
+
+  const [scheduleResponse, deals] = await Promise.all([listBitrixSchedules(), listRecentDeals()]);
+  const dealById = new Map(deals.map((deal) => [deal.id, deal]));
+  const schedules = scheduleResponse.items
+    .map(mapSchedule)
+    .map((schedule) => ({ ...schedule, deal: dealById.get(schedule.dealId) ?? null }));
+  const boardReceipts = ['unmatched', 'matched', 'trashed'].flatMap((name) => board?.[name] ?? []);
+  const context = {
+    deals,
+    contactDealsByDocument: await loadContactDealsByDocument(fresh, deals),
+    receipts: [...boardReceipts, ...fresh],
+    stages
+  };
+
+  return new Map(fresh.map((receipt) => [receipt.id, getSuggestions(receipt, schedules, context)]));
+}
+
 // Rebuilding the board costs around two minutes, so a change is applied to the cached copy
 // instead of throwing it away: readers keep getting an instant board, and it already reflects
-// what just happened. A full refresh still runs in the background for the derived figures
-// (schedule balances, suggestions) that only loadReceipts() can recompute.
+// what just happened. What the patch cannot know -- the fields Bitrix itself rewrote during
+// the match -- is then read back for that one receipt, which is a single request.
 async function updateCachedBoardReceipt(receiptId, change, { target = 'auto', refresh = true, bump = true } = {}) {
   // Bumped before anything is awaited, so a load already in flight cannot overwrite the cache.
   if (bump) receiptBoardGeneration += 1;
@@ -327,16 +527,19 @@ async function updateCachedBoardReceipt(receiptId, change, { target = 'auto', re
 
       for (const name of columns) next[name] = (board[name] ?? []).filter((item) => String(item.id) !== id);
       next[destination] = [updated, ...next[destination]];
-      receiptBoardCache = { updatedAt: receiptBoardCache.updatedAt, board: next };
+      receiptBoardCache = { ...receiptBoardCache, updatedAt: Date.now(), board: next };
       persistReceiptBoardCache().catch((error) => {
         console.error('Could not persist the patched receipt board cache:', error.message);
       });
     }
   }
 
+  // Reading just this receipt back out of Bitrix confirms the patch against the source and
+  // picks up whatever else the match rewrote on it. A full rebuild used to run here; it took
+  // two minutes, was discarded by the next click, and left the board frozen for hours.
   if (refresh) {
-    refreshReceiptBoardCache().catch((error) => {
-      console.error('Could not refresh receipt board cache:', error.message);
+    syncReceiptBoard({ receiptIds: id ? [id] : [], reason: 'receipt change' }).catch((error) => {
+      console.error('Could not sync the changed receipt:', error.message);
     });
   }
 }
@@ -389,9 +592,11 @@ export async function applyReceiptEventToBoard({ id, entityTypeId, event } = {})
   return { applied: await upsertCachedBoardReceipt(mapVoucherData(item, stages)), reason: 'upserted' };
 }
 
-async function withCachedBoard(mutate) {
-  // Bumped so a rebuild that started before the event cannot overwrite the result.
-  receiptBoardGeneration += 1;
+async function withCachedBoard(mutate, { bump = true } = {}) {
+  // Bumped so a rebuild that started before the event cannot overwrite the result. A delta
+  // sync passes bump: false -- it has just read the truth out of Bitrix, so invalidating a
+  // rebuild in flight would only throw away work that is already correct.
+  if (bump) receiptBoardGeneration += 1;
 
   try {
     await ensureReceiptBoardCacheLoaded();
@@ -407,12 +612,15 @@ async function withCachedBoard(mutate) {
   const next = mutate(board);
   if (!next) return false;
 
-  receiptBoardCache = { updatedAt: receiptBoardCache.updatedAt, board: next };
+  // The patched board is current, so it is stamped as such. Keeping the old timestamp -- the
+  // previous behaviour -- left the cache permanently past its TTL, and every read then kicked
+  // off another rebuild.
+  receiptBoardCache = { ...receiptBoardCache, updatedAt: Date.now(), board: next };
   await persistReceiptBoardCache();
   return true;
 }
 
-function upsertCachedBoardReceipt(receipt) {
+function upsertCachedBoardReceipt(receipt, options = {}) {
   const id = String(receipt.id);
 
   return withCachedBoard((board) => {
@@ -421,18 +629,19 @@ function upsertCachedBoardReceipt(receipt) {
       .map((name) => (board[name] ?? []).find((item) => String(item.id) === id))
       .find(Boolean);
     const inTrash = (board.trashed ?? []).some((item) => String(item.id) === id);
-    // Keep whatever suggestions the last rebuild worked out for a receipt we already knew.
-    const merged = { ...existing, ...receipt, suggestions: existing?.suggestions ?? [] };
+    // Keep whatever suggestions the last rebuild worked out for a receipt we already knew,
+    // unless the caller computed fresh ones for a receipt the board has never seen.
+    const merged = { ...existing, ...receipt, suggestions: receipt.suggestions ?? existing?.suggestions ?? [] };
     const destination = inTrash ? 'trashed' : (merged.status === 'matched' ? 'matched' : 'unmatched');
     const next = { ...board };
 
     for (const name of columns) next[name] = (board[name] ?? []).filter((item) => String(item.id) !== id);
     next[destination] = [merged, ...next[destination]];
     return next;
-  });
+  }, options);
 }
 
-function removeCachedBoardReceipt(receiptId) {
+function removeCachedBoardReceipt(receiptId, options = {}) {
   const id = String(receiptId);
 
   return withCachedBoard((board) => {
@@ -442,7 +651,7 @@ function removeCachedBoardReceipt(receiptId) {
     const next = { ...board };
     for (const name of columns) next[name] = (board[name] ?? []).filter((item) => String(item.id) !== id);
     return next;
-  });
+  }, options);
 }
 
 // Test-only, the counterpart of resetStageCache(): the cached board and its one-time read from
@@ -453,6 +662,8 @@ export function resetReceiptBoardCache() {
   receiptBoardLoadPromise = null;
   receiptBoardLoadGeneration = -1;
   receiptBoardGeneration += 1;
+  receiptSyncQueue = Promise.resolve();
+  contactIdsByDocumentPrefix.clear();
 }
 
 export function invalidateReceiptBoard() {
@@ -838,25 +1049,7 @@ async function listBitrixVouchers() {
     filter: {
       categoryId: TYPES.voucher.categoryId
     },
-    select: [
-      'id',
-      'title',
-      'xmlId',
-       TYPES.voucher.fields.bankTransactionId,
-      'stageId',
-      'parentId2',
-      'opportunity',
-      'currencyId',
-      'createdTime',
-      'updatedTime',
-      TYPES.voucher.fields.payerName,
-      TYPES.voucher.fields.amount,
-      TYPES.voucher.fields.paymentDate,
-      TYPES.voucher.fields.currencyEnum,
-      TYPES.voucher.fields.purpose,
-      TYPES.voucher.fields.payerDocument,
-      TYPES.voucher.fields.payerAddress
-    ]
+    select: VOUCHER_SELECT
   });
   return { items };
 }
@@ -1176,19 +1369,62 @@ async function findContactIdsByDocumentPrefix(documentPrefixes) {
 
   // Contacts often store the document with a suffix (series, issue date), so the exact filter above
   // misses them: look the remaining prefixes up one by one with a substring filter.
-  const unresolvedPrefixes = documentPrefixes
-    .filter((documentPrefix) => !contactIdsByPrefix.has(documentPrefix))
-    .slice(0, MAX_CONTACT_LOOKUPS);
+  //
+  // One request each, run in sequence behind a queue two requests wide: these lookups were
+  // most of the two minutes a rebuild took. The answers are remembered, so only payers seen
+  // for the first time cost anything, and a second rebuild is a fraction of the first.
+  const unresolved = [];
 
-  for (const documentPrefix of unresolvedPrefixes) {
+  for (const documentPrefix of documentPrefixes) {
+    if (contactIdsByPrefix.has(documentPrefix)) continue;
+
+    const remembered = readCachedContactIds(documentPrefix);
+    if (remembered) {
+      if (remembered.length) contactIdsByPrefix.set(documentPrefix, remembered);
+      continue;
+    }
+
+    unresolved.push(documentPrefix);
+  }
+
+  const lookups = unresolved.slice(0, MAX_CONTACT_LOOKUPS);
+
+  if (unresolved.length > lookups.length) {
+    console.warn(
+      `Looking up ${lookups.length} of ${unresolved.length} unknown payer documents this time; ` +
+      'the rest are covered by the next rebuild.'
+    );
+  }
+
+  for (const documentPrefix of lookups) {
     const partialMatches = await listBitrixMethod('crm.contact.list', {
       filter: { [`%${CONTACT_FIELDS.documentNumber}`]: documentPrefix },
       select: ['ID', CONTACT_FIELDS.documentNumber]
     });
-    collectContactIdsByPrefix(contactIdsByPrefix, partialMatches, [documentPrefix]);
+    const resolved = new Map();
+    collectContactIdsByPrefix(resolved, partialMatches, [documentPrefix]);
+
+    const contactIds = resolved.get(documentPrefix) ?? [];
+    // A miss is worth remembering too: without it every rebuild re-asks about the same payer.
+    contactIdsByDocumentPrefix.set(documentPrefix, { contactIds, expiresAt: Date.now() + env.CONTACT_LOOKUP_CACHE_TTL_MS });
+    if (contactIds.length) contactIdsByPrefix.set(documentPrefix, contactIds);
   }
 
   return contactIdsByPrefix;
+}
+
+function readCachedContactIds(documentPrefix) {
+  if (!env.CONTACT_LOOKUP_CACHE_TTL_MS) return null;
+
+  const entry = contactIdsByDocumentPrefix.get(documentPrefix);
+
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    contactIdsByDocumentPrefix.delete(documentPrefix);
+    return null;
+  }
+
+  return entry.contactIds;
 }
 
 function collectContactIdsByPrefix(target, contacts, documentPrefixes) {

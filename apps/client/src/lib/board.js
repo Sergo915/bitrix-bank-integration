@@ -1,3 +1,47 @@
+const COLUMNS = ['unmatched', 'matched', 'trashed'];
+
+// Folds a delta from /api/receipts/updates into the board in place. The point is that a new
+// or changed receipt reaches the screen without re-downloading the whole board -- which is
+// nearly two megabytes and, when it had to be rebuilt first, took minutes and often timed out.
+//
+// A receipt the manager is in the middle of matching is left alone: the optimistic move has
+// already put it in the right column, and the server's copy can still be a moment behind.
+export function mergeBoardUpdates(board, updates, { skipReceiptIds = [] } = {}) {
+  const receipts = (updates?.receipts ?? []).filter((receipt) => receipt?.id !== undefined);
+  const removedIds = (updates?.removedIds ?? []).map(String);
+  const skipped = new Set(skipReceiptIds.map(String));
+  const incoming = receipts.filter((receipt) => !skipped.has(String(receipt.id)));
+
+  if (!incoming.length && !removedIds.length) {
+    return updates?.log ? { ...board, log: updates.log } : board;
+  }
+
+  const next = { ...board };
+  const touched = new Set([...incoming.map((receipt) => String(receipt.id)), ...removedIds]);
+
+  for (const column of COLUMNS) {
+    next[column] = (board[column] ?? []).filter((item) => !touched.has(String(item.id)));
+  }
+
+  for (const receipt of incoming) {
+    const id = String(receipt.id);
+    const previous = COLUMNS.map((column) => (board[column] ?? []).find((item) => String(item.id) === id))
+      .find(Boolean);
+    // The trash is a local decision the server's copy knows nothing about on a plain update.
+    const wasTrashed = (board.trashed ?? []).some((item) => String(item.id) === id);
+    const column = wasTrashed ? 'trashed' : (receipt.status === 'matched' ? 'matched' : 'unmatched');
+
+    next[column] = [
+      { ...previous, ...receipt, suggestions: receipt.suggestions ?? previous?.suggestions ?? [] },
+      ...next[column]
+    ];
+  }
+
+  if (updates?.log) next.log = updates.log;
+
+  return next;
+}
+
 // The API answers with { ok, receipt: {...} }. Reading the activity entry through one helper
 // keeps that envelope in a single place: the history row went silently missing for a day
 // because the client looked for result.activity instead of result.receipt.activity.

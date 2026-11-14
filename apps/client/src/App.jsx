@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Banknote,
   Check,
@@ -15,13 +15,24 @@ import {
 import {
   confirmMatch,
   getReceipts,
+  getReceiptUpdates,
   moveReceiptToTrash,
   restoreReceiptFromTrash,
   searchDeals,
   undoMatch
 } from './lib/api.js';
-import { activityFromResponse, applyMatchToBoard, applyUndoToBoard, revertMatchOnBoard } from './lib/board.js';
+import {
+  activityFromResponse,
+  applyMatchToBoard,
+  applyUndoToBoard,
+  mergeBoardUpdates,
+  revertMatchOnBoard
+} from './lib/board.js';
 import './styles.css';
+
+// Half a minute is well inside what a delta sync costs the server (one Bitrix request) and
+// short enough that a receipt entered in Bitrix is on the board before anyone goes looking.
+const BOARD_SYNC_INTERVAL_MS = 30000;
 
 const BUILDING_OPTIONS = [
   { label: 'Milon Tower', value: '1507' },
@@ -43,6 +54,10 @@ export default function App() {
   const [selectedDeal, setSelectedDeal] = useState(null);
   const [manualSearchOpen, setManualSearchOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  // Separate from `loading`: a delta sync leaves the board on screen and only spins the
+  // button, while a full reload replaces everything and blanks the view.
+  const [syncing, setSyncing] = useState(false);
+  const inFlightRef = useRef([]);
   const [initialLoaded, setInitialLoaded] = useState(false);
   const [receiptQueueIndex, setReceiptQueueIndex] = useState(0);
   const [selectedSuggestionId, setSelectedSuggestionId] = useState('');
@@ -111,6 +126,57 @@ export default function App() {
     }
   }
 
+  // What the refresh button does, and what the open board does by itself every half minute.
+  // It asks the server only for the receipts that changed, so it answers in well under a
+  // second and the rest of the board -- selection, scroll position, open panels -- stays put.
+  // The old button reloaded everything and had to rebuild the board first: minutes of waiting
+  // that usually ended in a timeout, which looked like a button that spins forever.
+  async function syncUpdates({ receiptIds = [], showSpinner = false } = {}) {
+    if (showSpinner) setSyncing(true);
+
+    try {
+      const updates = await getReceiptUpdates({ receiptIds });
+
+      // A rebuild happened server-side (nothing was cached yet), so take the board whole.
+      if (updates.rebuilt) {
+        await refreshData(false);
+        return true;
+      }
+
+      // A receipt named explicitly was just acted on, so the server's copy of it is the
+      // authority even though the action is still settling on this side.
+      const requested = new Set(receiptIds.map(String));
+      const skipReceiptIds = inFlightReceiptIds().filter((id) => !requested.has(id));
+
+      setBoard((current) => mergeBoardUpdates(current, updates, { skipReceiptIds }));
+      if (showSpinner) setError('');
+      return true;
+    } catch (err) {
+      if (showSpinner) setError(err.message);
+      return false;
+    } finally {
+      if (showSpinner) setSyncing(false);
+    }
+  }
+
+  // Receipts the manager is acting on right now: the optimistic move already put them where
+  // they belong, and the server's copy can still be a moment behind.
+  //
+  // Read through a ref because the poller is installed once and would otherwise keep asking
+  // the state of the render it was created in -- and a stale answer here means a poll that
+  // drags a card back out of the column the manager just moved it to.
+  function inFlightReceiptIds() {
+    return inFlightRef.current;
+  }
+
+  inFlightRef.current = [
+    ...confirmingReceiptIds,
+    ...undoingReceiptIds,
+    ...trashingReceiptIds,
+    ...pendingMatches.map((match) => String(match.receiptId)),
+    ...processingMatches.map((match) => String(match.receiptId))
+  ];
+
   function handleSearch(nextFilters = manualFilters) {
     setManualFilters(nextFilters);
     setSelectedDeal(null);
@@ -137,6 +203,9 @@ export default function App() {
       setManualDeals([]);
       // The card already moved when the match was confirmed; this records the history entry.
       setBoard((current) => applyMatchToBoard(current, receiptId, dealId, activityFromResponse(result)));
+      // And this reads that one receipt back out of Bitrix, so the row shows what Bitrix
+      // actually stored rather than what we assumed it would.
+      syncUpdates({ receiptIds: [receiptId] });
       return true;
     } catch (err) {
       if (err.name !== 'AbortError') {
@@ -244,6 +313,7 @@ export default function App() {
     try {
       const result = await undoMatch({ receiptId: nextReceiptId, dealId });
       setBoard((current) => applyUndoToBoard(current, nextReceiptId, activityFromResponse(result)));
+      syncUpdates({ receiptIds: [nextReceiptId] });
       return true;
     } catch (err) {
       setError(err.message);
@@ -359,6 +429,28 @@ export default function App() {
     refreshData(false);
   }, []);
 
+  // A receipt added in Bitrix now appears on its own within half a minute. Before this the
+  // board was loaded once and never again, so a new receipt stayed invisible however many
+  // times the page was reloaded -- the server answered every reload from the same frozen
+  // cache. Polling pauses on a hidden tab so a forgotten window costs nothing.
+  useEffect(() => {
+    if (!initialLoaded) return undefined;
+
+    let stopped = false;
+    const poll = () => {
+      if (stopped || document.hidden) return;
+      syncUpdates();
+    };
+    const interval = window.setInterval(poll, BOARD_SYNC_INTERVAL_MS);
+    document.addEventListener('visibilitychange', poll);
+
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', poll);
+    };
+  }, [initialLoaded]);
+
   useEffect(() => {
     if (!pendingMatches.length) return undefined;
 
@@ -438,14 +530,26 @@ export default function App() {
         <div className="top-actions">
           <button
             className="refresh-button"
-            disabled={loading}
+            disabled={loading || syncing}
+            type="button"
+            onClick={() => syncUpdates({ showSpinner: true })}
+            aria-label={'Թարմացնել'}
+            title={'Թարմացնել տվյալները Bitrix-ից'}
+          >
+            <RefreshCw className={loading || syncing ? 'spinning' : ''} size={20} />
+            {loading || syncing ? 'Թարմացվում է' : 'Թարմացնել'}
+          </button>
+          {/* The slow path, kept available but no longer the thing a manager reaches for:
+              it recomputes suggestions and schedule balances and takes a couple of minutes. */}
+          <button
+            className="rebuild-button"
+            disabled={loading || syncing}
             type="button"
             onClick={() => refreshData(true)}
-            aria-label={'Թարմացնել'}
-            title={'Թարմացնել տվյալները'}
+            title={'Ամբողջական վերահաշվարկ՝ առաջարկներով։ Տևում է մի քանի րոպե։'}
           >
-            <RefreshCw className={loading ? 'spinning' : ''} size={20} />
-            {loading ? 'Թարմացվում է' : 'Թարմացնել'}
+            <RotateCcw size={18} />
+            Ամբողջական
           </button>
           {receiptQueue.length ? (
             <button

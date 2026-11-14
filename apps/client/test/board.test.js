@@ -4,6 +4,7 @@ import {
   activityFromResponse,
   applyMatchToBoard,
   applyUndoToBoard,
+  mergeBoardUpdates,
   revertMatchOnBoard
 } from '../src/lib/board.js';
 
@@ -218,4 +219,59 @@ test('a match with no deal id keeps whatever the receipt already pointed at', ()
   const next = applyMatchToBoard(board, '901', null);
 
   assert.equal(next.matched[0].matchedDealId, '7000');
+});
+
+// The board is nearly two megabytes and used to be re-downloaded in full for any change --
+// behind a rebuild that took minutes. These cover folding in just what moved.
+test('a new receipt from a delta lands on the board without touching the rest', () => {
+  const board = createBoard();
+  const merged = mergeBoardUpdates(board, {
+    receipts: [{ id: '950', payerName: 'New', status: 'unmatched', matchedDealId: null, suggestions: [] }],
+    removedIds: []
+  });
+
+  assert.equal(merged.unmatched.length, 3);
+  assert.ok(merged.unmatched.some((item) => item.id === '950'));
+  assert.deepEqual(merged.matched.map((item) => item.id), ['800'], 'other columns are untouched');
+  assert.deepEqual(merged.unmatched.find((item) => item.id === '901').suggestions, [{ dealId: '6653' }]);
+});
+
+test('a receipt matched elsewhere moves column and keeps its known suggestions', () => {
+  const merged = mergeBoardUpdates(createBoard(), {
+    receipts: [{ id: '901', payerName: 'A', status: 'matched', matchedDealId: '6653' }],
+    removedIds: []
+  });
+
+  assert.equal(merged.unmatched.some((item) => item.id === '901'), false);
+  const moved = merged.matched.find((item) => item.id === '901');
+  assert.equal(moved.matchedDealId, '6653');
+  assert.deepEqual(moved.suggestions, [{ dealId: '6653' }], 'what the last rebuild worked out is kept');
+});
+
+// The optimistic move has already put the card where it belongs; a poll answering with the
+// pre-change copy must not drag it back while the request is still in flight.
+test('a receipt the manager is acting on right now is left alone', () => {
+  const merged = mergeBoardUpdates(createBoard(), {
+    receipts: [{ id: '901', status: 'unmatched', matchedDealId: null }],
+    removedIds: []
+  }, { skipReceiptIds: ['901'] });
+
+  assert.deepEqual(merged, createBoard(), 'nothing changes while the action settles');
+});
+
+test('a trashed receipt stays in the trash when its Bitrix copy changes', () => {
+  const board = { ...createBoard(), trashed: [{ id: '905', status: 'unmatched' }] };
+  const merged = mergeBoardUpdates(board, {
+    receipts: [{ id: '905', status: 'matched', matchedDealId: '7000' }],
+    removedIds: []
+  });
+
+  assert.deepEqual(merged.trashed.map((item) => item.id), ['905']);
+  assert.equal(merged.matched.some((item) => item.id === '905'), false);
+});
+
+test('a receipt deleted in Bitrix disappears from the board', () => {
+  const merged = mergeBoardUpdates(createBoard(), { receipts: [], removedIds: ['902'] });
+
+  assert.deepEqual(merged.unmatched.map((item) => item.id), ['901']);
 });

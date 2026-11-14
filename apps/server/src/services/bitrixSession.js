@@ -7,7 +7,65 @@ import { runWithBitrixSession } from './bitrixContext.js';
 
 const sessions = new Map();
 const installationStorePath = resolve(env.BITRIX_INSTALLATION_STORE_PATH ?? 'data/bitrix-installations.json');
+const sessionStorePath = resolve(env.BITRIX_SESSION_STORE_PATH ?? 'data/bitrix-sessions.json');
 let installationTokensPromise;
+let sessionWriteQueue = Promise.resolve();
+let sessionWritePending = false;
+
+// Sessions used to live only in this process, so every deploy or crash silently signed
+// everyone out and the next click came back 401. They are small and short-lived, so the whole
+// map is rewritten at once; the file holds OAuth tokens and is written owner-only.
+export async function loadPersistedSessions() {
+  let parsed;
+  try {
+    parsed = JSON.parse(await readFile(sessionStorePath, 'utf8'));
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      console.error(`Ignoring unreadable Bitrix session store at ${sessionStorePath}:`, error.message);
+    }
+    return 0;
+  }
+
+  const now = Date.now();
+  let restored = 0;
+
+  for (const session of Array.isArray(parsed) ? parsed : []) {
+    if (!session?.id || !session.auth || !(session.expiresAt > now)) continue;
+    sessions.set(session.id, {
+      ...session,
+      cookieIssuedAt: session.cookieIssuedAt ?? session.lastSeenAt ?? now
+    });
+    restored += 1;
+  }
+
+  return restored;
+}
+
+function persistSessions() {
+  // Several requests can touch sessions in the same tick; one write covers them all.
+  if (sessionWritePending) return sessionWriteQueue;
+  sessionWritePending = true;
+
+  sessionWriteQueue = sessionWriteQueue.then(async () => {
+    sessionWritePending = false;
+    const now = Date.now();
+    for (const [id, session] of sessions) {
+      if (session.expiresAt <= now) sessions.delete(id);
+    }
+
+    const snapshot = JSON.stringify([...sessions.values()]);
+    try {
+      await mkdir(dirname(sessionStorePath), { recursive: true });
+      const temporaryPath = `${sessionStorePath}.${process.pid}.tmp`;
+      await writeFile(temporaryPath, snapshot, { encoding: 'utf8', mode: 0o600 });
+      await rename(temporaryPath, sessionStorePath);
+    } catch (error) {
+      console.error('Could not persist Bitrix sessions:', error.message);
+    }
+  });
+
+  return sessionWriteQueue;
+}
 
 export function normalizeBitrixAuth(body = {}, query = {}) {
   const bodySource = body.auth && typeof body.auth === 'object' ? body.auth : body;
@@ -105,15 +163,26 @@ export async function assertBitrixApplicationRequest(auth) {
   }
 }
 
+// auth.expiresIn is the lifetime of the Bitrix *access token* (an hour), not of this
+// application's session: callBitrixMethodResponse() renews the token on its own through
+// refreshBitrixAuth(). Capping the session by it signed managers out after an hour while the
+// cookie still claimed eight, so every request after that answered 401 -- which the UI showed
+// as a button that did nothing. The session now lives exactly as long as its cookie says.
+function sessionLifetime() {
+  return env.BITRIX_SESSION_TTL_MS;
+}
+
 export function createBitrixSession(auth) {
   const sessionId = randomBytes(32).toString('base64url');
   const session = {
     id: sessionId,
     auth,
-    expiresAt: Date.now() + Math.min(auth.expiresIn * 1000, env.BITRIX_SESSION_TTL_MS),
-    lastSeenAt: Date.now()
+    expiresAt: Date.now() + sessionLifetime(),
+    lastSeenAt: Date.now(),
+    cookieIssuedAt: Date.now()
   };
   sessions.set(sessionId, session);
+  persistSessions();
   return { session, cookie: serializeCookie(sessionId) };
 }
 
@@ -133,20 +202,34 @@ export function getBitrixSession(req) {
     return null;
   }
 
+  // Sliding expiry: someone working through the day is never interrupted, and an idle
+  // session still falls away after the full TTL.
+  session.expiresAt = Date.now() + sessionLifetime();
   session.lastSeenAt = Date.now();
   return session;
 }
 
 export function updateBitrixSession(session, auth) {
   session.auth = auth;
-  session.expiresAt = Date.now() + Math.min(auth.expiresIn * 1000, env.BITRIX_SESSION_TTL_MS);
+  session.expiresAt = Date.now() + sessionLifetime();
   session.lastSeenAt = Date.now();
+  persistSessions();
 }
 
 export function requireBitrixSession(req, res, next) {
   const session = getBitrixSession(req);
   if (!session) {
     return res.status(401).json({ error: 'Bitrix application session is required' });
+  }
+
+  // The cookie carries a fixed Max-Age from the moment it was issued, so a sliding session
+  // would still die with it. Re-issuing it once past the halfway mark keeps the two in step.
+  if (Date.now() - (session.cookieIssuedAt ?? 0) > sessionLifetime() / 2) {
+    session.cookieIssuedAt = Date.now();
+    res.setHeader('Set-Cookie', serializeCookie(session.id));
+    // Writing on every request would be wasteful; the halfway mark is often enough that a
+    // restart finds an expiry no more than half a TTL behind.
+    persistSessions();
   }
 
   return runWithBitrixSession(session, next);

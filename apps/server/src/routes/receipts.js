@@ -7,6 +7,7 @@ import {
   listCachedReceipts,
   listReceipts,
   normalizeApartmentSearchInput,
+  syncReceiptBoard,
   restoreReceiptOnBoard,
   searchDeals,
   trashReceiptOnBoard,
@@ -23,6 +24,38 @@ receiptsRouter.get('/', async (req, res, next) => {
   try {
     const forceRefresh = req.query.refresh === '1';
     res.json(await (forceRefresh ? listReceipts() : listCachedReceipts()));
+  } catch (error) {
+    next(error);
+  }
+});
+
+// What the refresh button calls, and what the open board polls. It asks Bitrix only about the
+// receipts touched since the last sync -- plus any the caller names -- and answers with just
+// those, so the client patches the few rows that changed instead of re-downloading the board.
+// The full rebuild behind GET /?refresh=1 takes minutes; this takes well under a second.
+receiptsRouter.get('/updates', async (req, res, next) => {
+  try {
+    const { receiptIds } = z
+      .object({
+        receiptIds: z
+          .string()
+          .trim()
+          .max(500)
+          .optional()
+          .default('')
+          .transform((value) => value.split(',').map((id) => id.trim()).filter((id) => /^\d+$/u.test(id)))
+      })
+      .parse(req.query);
+
+    const result = await syncReceiptBoard({ receiptIds, reason: 'client' });
+
+    res.json({
+      receipts: result.receipts,
+      removedIds: result.removedIds,
+      rebuilt: Boolean(result.rebuilt),
+      syncedAt: result.syncedAt,
+      log: result.log ?? result.board?.log ?? []
+    });
   } catch (error) {
     next(error);
   }

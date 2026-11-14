@@ -1,7 +1,13 @@
 import { Router } from 'express';
 import { readFile } from 'node:fs/promises';
 import { env } from '../config/env.js';
-import { assertAllowedBitrixDomain, callBitrixMethod, exchangeBitrixCode, getBitrixStatus } from '../services/bitrixClient.js';
+import {
+  assertAllowedBitrixDomain,
+  callBitrixMethod,
+  createBitrixClient,
+  exchangeBitrixCode,
+  getBitrixStatus
+} from '../services/bitrixClient.js';
 import {
   assertBitrixApplicationRequest,
   assertBitrixEventRequest,
@@ -61,6 +67,32 @@ bitrixRouter.post('/events/receipt', async (req, res, next) => {
     if (!result.applied) console.log(`Bitrix ${event} ignored: ${result.reason}`);
   } catch (error) {
     console.error(`Could not apply Bitrix ${event} to the board:`, error.message);
+  }
+});
+
+// Bitrix only hands the application token to the server-to-server install and to the POST that
+// opens the UI, so a browser that has lost its session cannot prove itself that way. It can
+// still prove itself with a live access token from BX24.getAuth(): only someone really inside
+// the portal can produce one. Verifying it against Bitrix is the check.
+//
+// Without this a manager whose session lapsed had to close the app and reopen it from Bitrix,
+// and until they worked that out every button answered 401 and appeared to do nothing.
+bitrixRouter.post('/session', async (req, res, next) => {
+  try {
+    const auth = normalizeBitrixAuth(req.body, req.query);
+
+    if (!auth) {
+      return res.status(400).json({ error: 'Bitrix authorization is required' });
+    }
+
+    allowBitrixEmbedding(res, auth.domain);
+    await assertBitrixAccessToken(auth);
+
+    const { cookie } = createBitrixSession(auth);
+    res.setHeader('Set-Cookie', cookie);
+    res.json({ ok: true });
+  } catch (error) {
+    next(error);
   }
 });
 
@@ -150,6 +182,28 @@ async function assertBitrixApplicationRequestForInstallation(auth) {
   if (!auth.applicationToken || !auth.memberId) {
     const error = new Error('Bitrix installation application token is required');
     error.status = 400;
+    throw error;
+  }
+}
+
+// A token the portal itself issued is the proof. Bitrix is asked who it belongs to; anything
+// other than a straight answer means the caller is not a signed-in portal user.
+async function assertBitrixAccessToken(auth) {
+  let profile;
+
+  try {
+    const { data } = await createBitrixClient(auth.domain, auth.accessToken).get('/profile.json');
+    profile = data;
+  } catch (cause) {
+    const error = new Error('Bitrix did not accept this authorization');
+    error.status = 401;
+    error.cause = cause;
+    throw error;
+  }
+
+  if (!profile?.result?.ID) {
+    const error = new Error('Bitrix did not accept this authorization');
+    error.status = 401;
     throw error;
   }
 }
