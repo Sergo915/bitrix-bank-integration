@@ -3,6 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { setTimeout as delay } from 'node:timers/promises';
 import axios from 'axios';
 import { env } from '../src/config/env.js';
 import { resetReceiptBoardCache, resetStageCache, syncReceiptBoard } from '../src/services/matchEngine.js';
@@ -165,7 +166,7 @@ test('re-importing a transaction that already exists does not rebuild the board'
   assert.equal(result.created, false);
 
   // Give anything that was kicked off in the background a chance to show up in `calls`.
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  await delay(200);
 
   const listCalls = calls.filter((method) => method === 'crm.item.list.json').length;
   assert.equal(listCalls, 1, `only the xmlId lookup may run, saw ${listCalls} list calls`);
