@@ -995,10 +995,11 @@ function HistoryModal({ log, onClose, receipts, matchedReceiptIds, onUndoMatch, 
             <span>{'\u0533\u0578\u0582\u0574\u0561\u0580'}</span>
             <strong>{visibleSummary.totalLabel}</strong>
           </div>
-          {/* With a filter on, the sum alone is ambiguous: it is the total of the rows found,
-              so how many were found belongs next to it. */}
+          {/* The sum alone is ambiguous: it is the total of the rows on screen, so how many
+              rows that is belongs next to it. Named for what it always is -- a count -- and
+              not for the filtering, which is only sometimes on. */}
           <div>
-            <span>\u0533\u057f\u0576\u057e\u0561\u056e</span>
+            <span>\u0554\u0561\u0576\u0561\u056f</span>
             <strong>{visibleLog.length}</strong>
           </div>
         </div>
