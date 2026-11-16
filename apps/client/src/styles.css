@@ -1635,6 +1635,74 @@ a.bitrix-link-button {
   min-height: 30px;
 }
 
+/* The payer box takes the room it needs for a full Armenian name; the two amount bounds sit
+   beside it at the same width as the date bounds below, so the two filter rows line up. */
+.history-search {
+  align-items: end;
+  display: grid;
+  gap: 6px 8px;
+  grid-template-columns: minmax(180px, 1fr) minmax(110px, 130px) minmax(110px, 130px) auto;
+}
+
+.history-search label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.history-search label > span {
+  color: #536985;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.history-search input {
+  min-height: 32px;
+  width: 100%;
+}
+
+.history-search-input {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #dce4ec;
+  border-radius: 8px;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  padding: 0 8px;
+}
+
+.history-search-input svg {
+  color: #8296ad;
+  flex: 0 0 auto;
+}
+
+.history-search-input input {
+  background: transparent;
+  border: 0;
+  min-width: 0;
+  outline: none;
+}
+
+.history-search-clear {
+  align-items: center;
+  display: inline-flex;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+@media (max-width: 620px) {
+  .history-search {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .history-search-name {
+    grid-column: 1 / -1;
+  }
+}
+
 .history-date-filters {
   align-items: end;
   display: grid;
@@ -1660,7 +1728,7 @@ a.bitrix-link-button {
 .history-summary {
   display: grid;
   gap: 8px;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
 }
 
 .history-summary div {

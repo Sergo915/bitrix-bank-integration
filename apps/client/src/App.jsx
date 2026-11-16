@@ -28,6 +28,7 @@ import {
   mergeBoardUpdates,
   revertMatchOnBoard
 } from './lib/board.js';
+import { filterHistoryBySearch, hasHistorySearch } from './lib/historySearch.js';
 import './styles.css';
 
 // Half a minute is well inside what a delta sync costs the server (one Bitrix request) and
@@ -849,12 +850,20 @@ function HistoryModal({ log, onClose, receipts, matchedReceiptIds, onUndoMatch, 
   const [historyType, setHistoryType] = useState('matched');
   const [matchActionFilter, setMatchActionFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState({ from: '', to: '' });
+  const [search, setSearch] = useState({ name: '', amountFrom: '', amountTo: '' });
   const receiptById = new Map(receipts.map((receipt) => [String(receipt.id), receipt]));
   const matchHistoryLog = log.filter((item) => isMatchHistoryActivity(item.action));
   const filteredMatchHistoryLog = filterMatchHistoryByAction(matchHistoryLog, matchActionFilter);
   const undoableActivityIds = getUndoableMatchActivityIds(matchHistoryLog, matchedReceiptIds);
   const createdLog = log.filter((item) => isCreatedReceiptActivity(item.action));
-  const visibleLog = filterHistoryByDate(historyType === 'matched' ? filteredMatchHistoryLog : createdLog, dateFilter);
+  const datedLog = filterHistoryByDate(historyType === 'matched' ? filteredMatchHistoryLog : createdLog, dateFilter);
+  // The receipt is read from the board while it is still there and from the activity entry
+  // once it is not, which is the same rule the rows themselves display by.
+  const visibleLog = filterHistoryBySearch(datedLog, search, {
+    getName: (item) => getHistorySearchableName(item, receiptById),
+    getAmount: (item) => getHistoryAmountValue(item, receiptById)
+  });
+  const searching = hasHistorySearch(search);
   const visibleSummary = getHistoryAmountSummary(visibleLog, receiptById);
   const matchedCount = matchHistoryLog.filter((item) => getMatchedDealId(item.action)).length;
   const unlinkedCount = matchHistoryLog.filter((item) => getUnlinkedDealId(item.action)).length;
@@ -917,6 +926,52 @@ function HistoryModal({ log, onClose, receipts, matchedReceiptIds, onUndoMatch, 
             </button>
           </div>
         ) : null}
+        {/* Either box works alone: a payer with no amount, an amount with no payer. */}
+        <div className="history-search" aria-label="History search">
+          <label className="history-search-name">
+            <span>Վճարող</span>
+            <div className="history-search-input">
+              <Search aria-hidden="true" size={16} />
+              <input
+                type="search"
+                inputMode="text"
+                placeholder="Անուն կամ ազգանուն"
+                value={search.name}
+                onChange={(event) => setSearch((current) => ({ ...current, name: event.target.value }))}
+              />
+            </div>
+          </label>
+          <label>
+            <span>Գումարը՝ -ից</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="0"
+              value={search.amountFrom}
+              onChange={(event) => setSearch((current) => ({ ...current, amountFrom: event.target.value }))}
+            />
+          </label>
+          <label>
+            <span>Մինչև</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="∞"
+              value={search.amountTo}
+              onChange={(event) => setSearch((current) => ({ ...current, amountTo: event.target.value }))}
+            />
+          </label>
+          {searching ? (
+            <button
+              className="secondary history-search-clear"
+              type="button"
+              onClick={() => setSearch({ name: '', amountFrom: '', amountTo: '' })}
+            >
+              <X size={15} />
+              Մաքրել
+            </button>
+          ) : null}
+        </div>
         <div className="history-date-filters">
           <label>
             <span>Սկիզբ</span>
@@ -939,6 +994,12 @@ function HistoryModal({ log, onClose, receipts, matchedReceiptIds, onUndoMatch, 
           <div>
             <span>{'\u0533\u0578\u0582\u0574\u0561\u0580'}</span>
             <strong>{visibleSummary.totalLabel}</strong>
+          </div>
+          {/* With a filter on, the sum alone is ambiguous: it is the total of the rows found,
+              so how many were found belongs next to it. */}
+          <div>
+            <span>\u0533\u057f\u0576\u057e\u0561\u056e</span>
+            <strong>{visibleLog.length}</strong>
           </div>
         </div>
         <div className="activity-list history-list">
@@ -975,7 +1036,11 @@ function HistoryModal({ log, onClose, receipts, matchedReceiptIds, onUndoMatch, 
               </div>
             );
           })}
-          {!visibleLog.length ? <p className="muted">Պատմություն չկա</p> : null}
+          {!visibleLog.length ? (
+            <p className="muted">
+              {searching ? 'Որոնմանը համապատասխան գրառում չկա' : 'Պատմություն չկա'}
+            </p>
+          ) : null}
         </div>
       </section>
     </div>
@@ -1239,6 +1304,22 @@ function getReceiptHistoryTitle(item, receiptById) {
 function getReceiptHistoryPayer(item, receiptById) {
   const receipt = receiptById.get(String(item.receiptId));
   return String(receipt?.payerName ?? item.payerName ?? '').trim();
+}
+
+// A payer search also looks at the receipt title, because the title is what a created-receipt
+// entry carries when the payer was never recorded on it -- and it is what the row shows.
+function getHistorySearchableName(item, receiptById) {
+  return [
+    getReceiptHistoryPayer(item, receiptById),
+    getReceiptHistoryTitle(item, receiptById)
+  ].filter(Boolean).join(' ');
+}
+
+// The number behind the formatted amount the row displays, so a search and the row can never
+// disagree about which receipt is worth how much.
+function getHistoryAmountValue(item, receiptById) {
+  const receipt = receiptById.get(String(item.receiptId));
+  return Number(receipt?.amount ?? item.amount);
 }
 
 function getReceiptHistoryAmount(item, receiptById) {
